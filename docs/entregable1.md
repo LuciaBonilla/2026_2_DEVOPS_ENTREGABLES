@@ -40,29 +40,29 @@ La aplicación utiliza:
 
 - [FastAPI](https://fastapi.tiangolo.com/):
 
-FastAPI es un framework web de alto rendimiento para crear API de servicios basados en HTTP en Python 3.8+. Utiliza Pydantic y sugerencias de tipo para validar, serializar y deserializar datos. FastAPI también genera automáticamente documentación OpenAPI para las API creadas con él.
+    FastAPI es un framework web de alto rendimiento para crear API de servicios basados en HTTP en Python 3.8+. Utiliza Pydantic y sugerencias de tipo para validar, serializar y deserializar datos. FastAPI también genera automáticamente documentación OpenAPI para las API creadas con él.
 
-> **_Nota_** [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) es una librería de Python que sirve para validar y transformar datos de forma automática.
+    > **_Nota_** [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) es una librería de Python que sirve para validar y transformar datos de forma automática.
 
-> **_Nota_** [OpenAPI](https://www.openapis.org/) es un formato estándar y abierto para describir API REST. Permite definir rutas, parámetros, métodos HTTP y respuestas en archivos legibles por humanos y máquinas usando YAML o JSON, sin importar el lenguaje de programación.
+    > **_Nota_** [OpenAPI](https://www.openapis.org/) es un formato estándar y abierto para describir API REST. Permite definir rutas, parámetros, métodos HTTP y respuestas en archivos legibles por humanos y máquinas usando YAML o JSON, sin importar el lenguaje de programación.
 
 - [Uvicorn](https://uvicorn.dev/):
 
-Uvicorn es una implementación de servidor web ASGI (Asynchronous Server Gateway Interface) para Python.
+    Uvicorn es una implementación de servidor web ASGI (Asynchronous Server Gateway Interface) para Python.
 
-Hasta hace poco, Python carecía de una interfaz de servidor/aplicación de bajo nivel para frameworks asíncronos. La especificación ASGI cubre esta carencia y nos permite comenzar a desarrollar un conjunto común de herramientas utilizables en todos los frameworks asíncronos.
+    Hasta hace poco, Python carecía de una interfaz de servidor/aplicación de bajo nivel para frameworks asíncronos. La especificación ASGI cubre esta carencia y nos permite comenzar a desarrollar un conjunto común de herramientas utilizables en todos los frameworks asíncronos.
 
-> **_Nota_** [ASGI (Asynchronous Server Gateway Interface)](https://asgi.readthedocs.io/en/latest/) está diseñado para proporcionar una interfaz estándar entre servidores web, frameworks y aplicaciones Python con capacidad síncrona y asíncrona.
+    > **_Nota_** [ASGI (Asynchronous Server Gateway Interface)](https://asgi.readthedocs.io/en/latest/) está diseñado para proporcionar una interfaz estándar entre servidores web, frameworks y aplicaciones Python con capacidad síncrona y asíncrona.
 
 La aplicación es deplegada con:
 
 - [Docker](https://www.docker.com/)
 
-Docker es una plataforma de código abierto que utiliza la tecnología de contenedores para crear, probar e implementar aplicaciones rápidamente. Empaqueta el software en unidades ligeras e independientes llamadas contenedores, que incluyen todo lo necesario para que la aplicación funcione, como código, entorno de ejecución, herramientas del sistema y bibliotecas. Esto garantiza que la aplicación se comporte de forma idéntica en diferentes entornos, eliminando el clásico problema de "en mi máquina funciona".
+    Docker es una plataforma de código abierto que utiliza la tecnología de contenedores para crear, probar e implementar aplicaciones rápidamente. Empaqueta el software en unidades ligeras e independientes llamadas contenedores, que incluyen todo lo necesario para que la aplicación funcione, como código, entorno de ejecución, herramientas del sistema y bibliotecas. Esto garantiza que la aplicación se comporte de forma idéntica en diferentes entornos, eliminando el clásico problema de "en mi máquina funciona".
 
 - [Kubernetes](https://kubernetes.io/es/)
 
-Minikube
+    Minikube
 
 ...
 
