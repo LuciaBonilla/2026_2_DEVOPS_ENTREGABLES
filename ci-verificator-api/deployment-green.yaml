@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-verificator-api-green
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: ci-verificator-api
+      version: green
+
+  template:
+    metadata:
+      labels:
+        app: ci-verificator-api
+        version: green
+    spec:
+      containers:
+      - name: ci-verificator-api-container
+        image: ci-verificator-api:2.0.0
+        ports:
+        - containerPort: 8000
