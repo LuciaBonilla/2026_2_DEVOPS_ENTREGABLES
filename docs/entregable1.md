@@ -128,8 +128,8 @@ La [estrategia de despliegue blue/green](https://www.ibm.com/think/topics/blue-g
 
 Entornos:
 
-- Blue: `ci-verificator-api v1.0.0`
-- Green: `ci-verificator-api v2.0.0`
+- Blue: `ci-validator-api v1.0.0`
+- Green: `ci-validator-api v2.0.0`
 
 k8s no tiene blue/green nativo, sólo se puede lograr manipulando el selector de un Service.
 
@@ -144,18 +144,18 @@ Debido a que los pods de Kubernetes son efímeros (lo que significa que con frec
 ## Comandos para Desplegar y Utilizar la Aplicación
 
 ```bash
-cd ci-verificator-api
+cd ci-validator-api
 
 # Build de imágenes Docker.
-docker build -f Dockerfile -t ci-verificator-api:1.0.0 ./v1.0.0
-docker build -f Dockerfile -t ci-verificator-api:2.0.0 ./v2.0.0
+docker build -f Dockerfile -t ci-validator-api:1.0.0 ./v1.0.0
+docker build -f Dockerfile -t ci-validator-api:2.0.0 ./v2.0.0
 
 # Iniciar Minikube.
 minikube start --driver=docker
 
 # Transferir las imágenes locales Docker a Minikube.
-minikube image load ci-verificator-api:1.0.0
-minikube image load ci-verificator-api:2.0.0
+minikube image load ci-validator-api:1.0.0
+minikube image load ci-validator-api:2.0.0
 
 # Crear pod con un contenedor con la versión blue.
 kubectl apply -f deployment-blue.yaml
@@ -163,8 +163,8 @@ kubectl apply -f deployment-blue.yaml
 kubectl apply -f deployment-green.yaml
 
 # Ver status de los deployments.
-kubectl rollout status deployment/ci-verificator-api-blue
-kubectl rollout status deployment/ci-verificator-api-green
+kubectl rollout status deployment/ci-validator-api-blue
+kubectl rollout status deployment/ci-validator-api-green
 
 # Ver pods.
 kubectl get pods
@@ -182,7 +182,7 @@ kubectl logs -f -l version=green --prefix --max-log-requests=10
 
 # En PowerShell:
 # En otra terminal, levantar el túnel para conectarse al pod.
-minikube service ci-verificator-api --url
+minikube service ci-validator-api --url
 # Esto dará la URL para conectarse al pod.
 
 # En otra terminal, enviar tráfico y revisar los logs de las otras terminales.
@@ -194,16 +194,16 @@ curl.exe "http://localhost:X/ci/123"
 # Nota: Sólo debería verse que llegan peticiones a blue, pero a green no.
 
 # Cambiar el selector del service de blue a green.
-kubectl patch service ci-verificator-api -p '{\"spec\":{\"selector\":{\"version\":\"green\"}}}'
+kubectl patch service ci-validator-api -p '{\"spec\":{\"selector\":{\"version\":\"green\"}}}'
 # En PowerShell
 
 # Verificar el selector del service.
-kubectl get service ci-verificator-api -o jsonpath='{.spec.selector.version}'
+kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
 # Enviar el tráfico de nuevo (válido en PowerShell) y ver los logs en la terminal de blue y green.
 
 # Rollback
-kubectl patch service ci-verificator-api -p '{\"spec\":{\"selector\":{\"version\":\"blue\"}}}'
+kubectl patch service ci-validator-api -p '{\"spec\":{\"selector\":{\"version\":\"blue\"}}}'
 
 # Enviar el tráfico de nuevo (válido en PowerShell) y ver los logs en la terminal de blue y green.
 

@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ci-verificator-api-blue
+  name: ci-validator-api-blue
 spec:
   replicas: 1
 
   selector:
     matchLabels:
-      app: ci-verificator-api
+      app: ci-validator-api
       version: blue
 
   template:
     metadata:
       labels:
-        app: ci-verificator-api
+        app: ci-validator-api
         version: blue
     spec:
       containers:
-      - name: ci-verificator-api-container
-        image: ci-verificator-api:1.0.0
+      - name: ci-validator-api-container
+        image: ci-validator-api:1.0.0
         ports:
         - containerPort: 8000
