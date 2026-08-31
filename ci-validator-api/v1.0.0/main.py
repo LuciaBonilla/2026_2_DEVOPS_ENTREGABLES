@@ -21,25 +21,30 @@ VERSION = "1.0.0"
 CHECK_DIGIT_WEIGHTS = (2, 9, 8, 7, 6, 3, 4)
 NON_DIGITS = re.compile(r"\D", re.ASCII)
 
-MIN_DIGITS = 7 # Forma de presentación de cédula con 7 dígitos: xxx.xxx-x
-MAX_DIGITS = 8 # Forma de presentación de cédula con 8 dígitos: x.xxx.xxx-x
+# Forma de presentación de cédula con 7 dígitos: xxx.xxx-x
+# Forma canónica de cédula con 7 dígitos: 0xxxxxxx (-> 8 números, el primero 0)
+MIN_DIGITS = 7
+
+# Forma de presentación de cédula con 8 dígitos: x.xxx.xxx-x
+# Forma canónica de cédula con 8 dígitos: xxxxxxxx (-> 8 números, el primero distinto de 0)
+MAX_DIGITS = 8 
 
 
 app = FastAPI(title="Validador de Cédula de Identidad Uruguaya", version=VERSION)
 
 
 class ValidationResult(BaseModel):
-    input: str
-    normalized_ci: str | None = None    # Forma canónica de la cédula (xxxxxxxx).
-    valid: bool
-    expected_check_digit: int | None = None
-    message: str
-    api_version: str = VERSION
+    input: str                                  
+    normalized_ci: str | None = None            # Forma canónica de la cédula (xxxxxxxx).
+    valid: bool                                 # Indica si la cédula es válida.
+    expected_check_digit: int | None = None     # Dígito verificador esperado dada la base.
+    message: str                                # Mensaje.
+    api_version: str = VERSION                  # Versión de la API.
 
 
 def calculate_check_digit(base: str) -> int:
     """
-    Calcula el dígito verificador a partir de la base de 7 dígitos.
+    Calcula el dígito verificador de la cédula a partir de la base de 7 dígitos.
     """
     total = 0
     for i in range(7):
@@ -64,7 +69,7 @@ def health() -> dict:
 def validate_ci(number: str) -> ValidationResult:
     digits = NON_DIGITS.sub("", number)     # Elimina todo carácter que no sea un dígito.
 
-    # VALIDACIÓN 1: Sin dígitos.
+    # VALIDACIÓN 1: Tiene dígitos.
     if not digits:
         return ValidationResult(
             input=number,
@@ -72,7 +77,7 @@ def validate_ci(number: str) -> ValidationResult:
             message="La entrada no contiene dígitos.",
         )
 
-    # VALIDACIÓN 2: Número de dígitos fuera del rango.
+    # VALIDACIÓN 2: Cantidad de dígitos dentro del rango.
     if not MIN_DIGITS <= len(digits) <= MAX_DIGITS:
         return ValidationResult(
             input=number,
@@ -96,6 +101,7 @@ def validate_ci(number: str) -> ValidationResult:
         message=(
             "Cédula válida."
             if valid
-            else f"Dígito verificador inválido: se esperaba {expected_check_digit}, pero se ingresó {provided_check_digit}"
+            else f"Dígito verificador inválido: se esperaba {expected_check_digit}, "
+            f"pero se ingresó {provided_check_digit}"
         ),
     )
