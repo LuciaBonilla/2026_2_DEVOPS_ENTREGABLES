@@ -104,7 +104,7 @@ La aplicación es desplegada con:
 
     Docker es una plataforma de código abierto que utiliza la tecnología de contenedores para crear, probar e implementar aplicaciones rápidamente. Empaqueta el software en unidades ligeras e independientes llamadas contenedores, que incluyen todo lo necesario para que la aplicación funcione, como código, entorno de ejecución, herramientas del sistema y bibliotecas. Esto garantiza que la aplicación se comporte de forma idéntica en diferentes entornos, eliminando el clásico problema de "en mi máquina funciona".
 
-- [Kubernetes (k8s](https://kubernetes.io/es/)
+- [Kubernetes (k8s)](https://kubernetes.io/es/)
 
     Kubernetes es un sistema que permite automatizar, escalar y administrar aplicaciones contenerizadas. Junta una o más computadoras, ya sean máquinas virtuales o hardware "bare metal", en un cluster que puede correr workloads en contenedores.
 
