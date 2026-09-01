@@ -32,7 +32,7 @@ La aplicación es una API (más precisamente, API + backend) simple en Python qu
 
 El servicio no tiene estado: no utiliza volúmenes, ni base de datos, ni estado en memoria.
 
-> **_Nota_** Algoritmo para calcular el dígito verificador de la cédula: https://www.youtube.com/watch?v=JTGrNyKa1lI
+> **_Nota_** Algoritmo para calcular el dígito verificador de la cédula de identidad uruguaya: https://www.youtube.com/watch?v=JTGrNyKa1lI
 
 ### Endpoints v1.0.0
 
@@ -52,29 +52,29 @@ El servicio no tiene estado: no utiliza volúmenes, ni base de datos, ni estado 
     Body Response:
     ```json
     {
-        "input": string,
-        "normalized_ci": string,
-        "valid": bool,
-        "expected_check_digit": integer,
-        "message": string,
-        "api_version": string
+        "input": string,                    
+        "normalized_ci": string,            # Forma canónica de la cédula (xxxxxxxx).
+        "valid": bool,                      # Indica si la cédula es válida.
+        "expected_check_digit": integer,    # Dígito verificador esperado dada la base.
+        "message": string,                  # Mensaje.
+        "api_version": string               # Versión de la API.
     }
     ```
 
 ### Endpoints v2.0.0
 
-Los mismos endpoints que la versión v1.0.0, pero agregando un campo al Body Response del endpoint `GET /ci/{number:string}`:
+Los mismos endpoints que la versión v1.0.0, pero agregando un nuevo campo al Body Response del endpoint `GET /ci/{number:string}`:
 
 Body Response:
 ```json
 {
     "input": string,
-    "normalized_ci": string, -> retorna en forma canónica (xxxxxxxx)
-    "formatted_ci": string, -> retorna en forma de presentación (xxx.xxx-x o x.xxx.xxx-x)
-    "valid": bool,
-    "expected_check_digit": integer,
-    "message": string,
-    "api_version": string
+    "normalized_ci": string,            # Forma canónica de la cédula (xxxxxxxx).
+    "formatted_ci": string,             # NUEVO v2.0.0. Forma de presentación de cédula (xxx.xxx-x o x.xxx.xxx-x).
+    "valid": bool,                      # Indica si la cédula es válida.
+    "expected_check_digit": integer,    # Dígito verificador esperado dada la base.
+    "message": string,                  # Mensaje.
+    "api_version": string               # Versión de la API.
 }
 ```
 
@@ -84,7 +84,7 @@ La aplicación utiliza:
 
 - [FastAPI](https://fastapi.tiangolo.com/):
 
-    FastAPI es un framework web de alto rendimiento para crear API de servicios basados en HTTP en Python 3.8+. Utiliza Pydantic y sugerencias de tipo para validar, serializar y deserializar datos. FastAPI también genera automáticamente documentación OpenAPI para las API creadas con él.
+    FastAPI es un framework web de alto rendimiento para crear APIs de servicios basados en HTTP en Python 3.8+. Utiliza Pydantic y sugerencias de tipo para validar, serializar y deserializar datos. FastAPI también genera automáticamente documentación OpenAPI para las APIs creadas con él.
 
     > **_Nota_** [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) es una librería de Python que sirve para validar y transformar datos de forma automática.
 
@@ -135,7 +135,7 @@ k8s no tiene blue/green nativo, sólo se puede lograr manipulando el selector de
 
 Un Service es un recurso API de Kubernetes que define un punto final de red estable (una dirección IP permanente y un nombre DNS) para conectar un grupo específico de pods.
 
-Debido a que los pods de Kubernetes son efímeros (lo que significa que con frecuencia se destruyen, recrean, escalan y se les asignan direcciones IP nuevas e impredecibles), no se puede confiar en la IP de pods individuales para la creación de redes. Un Service declara el conjunto de pods y les asigna una identidad de red estable, como se puede ver en el siguiente diagrama:
+Debido a que los pods de Kubernetes son efímeros (lo que significa que con frecuencia se destruyen, recrean, escalan y se les asignan direcciones IP nuevas e impredecibles), no se puede confiar en la IP de pods individuales para la creación de redes. Un Service declara el conjunto de pods y les asigna una identidad de red estable (en este caso, MinikubeIP:nodePort para tráfico externo al cluster y ClusterIP:port), como se puede ver en el siguiente diagrama:
 
 ![Estrategia de Deployment Blue/Green](images/entregable1.png)
 
@@ -143,23 +143,27 @@ Debido a que los pods de Kubernetes son efímeros (lo que significa que con frec
 
 ## Comandos para Desplegar y Utilizar la Aplicación
 
+Los siguientes comandos fueron ejecutados en PowerShell (>v6.0):
+
 ```bash
 cd ci-validator-api
 
-# Build de imágenes Docker.
+# 1. Build de imágenes Docker.
 docker build -f Dockerfile -t ci-validator-api:1.0.0 ./v1.0.0
 docker build -f Dockerfile -t ci-validator-api:2.0.0 ./v2.0.0
 
-# Iniciar Minikube.
+# 2. Iniciar Minikube.
 minikube start --driver=docker
 
-# Transferir las imágenes locales Docker a Minikube.
+# 3. Transferir las imágenes locales Docker a Minikube.
 minikube image load ci-validator-api:1.0.0
 minikube image load ci-validator-api:2.0.0
 
-# Crear pod con un contenedor con la versión blue.
+# Ver imágenes en minikube.
+minikube image ls
+
+# 4. Crear pod con un contenedor con la versión blue (1.0.0) y otro pod con la versión green (2.0.0).
 kubectl apply -f deployment-blue.yaml
-# Crear pod con un contenedor con la versión green.
 kubectl apply -f deployment-green.yaml
 
 # Ver status de los deployments.
@@ -169,43 +173,44 @@ kubectl rollout status deployment/ci-validator-api-green
 # Ver pods.
 kubectl get pods
 
-# Verificar que blue corre la imagen v1.0.0 y que green corre la imagen v2.0.0:
-kubectl get pods -l version=blue -o jsonpath='{.items[0].spec.containers[0].image}'
-kubectl get pods -l version=green -o jsonpath='{.items[0].spec.containers[0].image}'
+# Verificar que el pod blue corre la imagen v1.0.0 y que el pod green corre la imagen v2.0.0.
+kubectl get pods -l app=ci-validator-api,version=blue -o jsonpath='{.items[0].spec.containers[0].image}'
+kubectl get pods -l app=ci-validator-api,version=green -o jsonpath='{.items[0].spec.containers[0].image}'
 
-# Crear servicio para redirigir tráfico a blue y luego a green (inicialmente apunta a blue).
+# 5. Crear servicio para redirigir tráfico a blue y luego a green (inicialmente se redirige a blue).
 kubectl apply -f service.yaml
 
-# Abrir dos terminales para ver los logs de ambos pods.
+# Verificar el selector del service (debería apuntar a blue).
+kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
+
+# 6. Abrir dos terminales para ver los logs de ambos pods.
 kubectl logs -f -l version=blue --prefix --max-log-requests=10
 kubectl logs -f -l version=green --prefix --max-log-requests=10
 
-# En PowerShell:
-# En otra terminal, levantar el túnel para conectarse al pod.
+# 7. En otra terminal, levantar el túnel para conectarse al pod.
 minikube service ci-validator-api --url
-# Esto dará la URL para conectarse al pod.
+# Esto dará la URL para conectarse al pod, que es algo como http://localhost:X, X siendo un número de puerto cualquiera.
 
-# En otra terminal, enviar tráfico y revisar los logs de las otras terminales.
-curl.exe "http://localhost:X/health"
-curl.exe "http://localhost:X/ci/"
-curl.exe "http://localhost:X/ci/1234567"
-curl.exe "http://localhost:X/ci/5.537.033-1"
-curl.exe "http://localhost:X/ci/123"
-# Nota: Sólo debería verse que llegan peticiones a blue, pero a green no.
+# 8. Enviar tráfico y revisar los logs de las otras terminales (deberían llegar peticiones a blue).
+http://localhost:X/docs
 
-# Cambiar el selector del service de blue a green.
-kubectl patch service ci-validator-api -p '{\"spec\":{\"selector\":{\"version\":\"green\"}}}'
-# En PowerShell
+# 9. En otra terminal, cambiar el selector del service de blue a green.
+kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"green"}}}'
 
-# Verificar el selector del service.
+# Verificar el selector del service (debería apuntar a green).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# Enviar el tráfico de nuevo (válido en PowerShell) y ver los logs en la terminal de blue y green.
+# 10. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green.
+http://localhost:X/docs
 
-# Rollback
-kubectl patch service ci-validator-api -p '{\"spec\":{\"selector\":{\"version\":\"blue\"}}}'
+# 11. Rollback.
+kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"blue"}}}'
 
-# Enviar el tráfico de nuevo (válido en PowerShell) y ver los logs en la terminal de blue y green.
+# Verificar el selector del service (debería apuntar a blue).
+kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
+
+# 12. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green.
+http://localhost:X/docs
 
 minikube stop
 ```

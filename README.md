@@ -1,7 +1,5 @@
 # 2026_2_DEVOPS_ENTREGABLES
 
-Entregables para el curso DevOps.
-
 ## Universidad Católica del Uruguay
 
 Entregables para el curso DevOps de la Universidad Católica del Uruguay (año 2026, segundo semestre).
