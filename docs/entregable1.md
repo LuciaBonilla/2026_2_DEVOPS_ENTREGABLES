@@ -137,7 +137,7 @@ k8s no tiene blue/green nativo, sólo se puede lograr manipulando el selector de
 
 Un Service es un recurso API de Kubernetes que define un punto final de red estable (una dirección IP permanente y un nombre DNS) para conectar un grupo específico de pods.
 
-Debido a que los pods de Kubernetes son efímeros (lo que significa que con frecuencia se destruyen, recrean, escalan y se les asignan direcciones IP nuevas e impredecibles), no se puede confiar en la IP de pods individuales para la creación de redes. Un Service declara el conjunto de pods y les asigna una identidad de red estable (en este caso, MinikubeIP:nodePort para tráfico externo al clúster y ClusterIP:port), como se puede ver en el siguiente diagrama:
+Debido a que los pods de Kubernetes son efímeros (lo que significa que con frecuencia se destruyen, recrean, escalan y se les asignan direcciones IP nuevas e impredecibles), no se puede confiar en la IP de pods individuales para la creación de redes. Un Service declara el conjunto de pods y les asigna una identidad de red estable (en este caso, MinikubeIP:nodePort para tráfico externo al clúster y ClusterIP:port para tráfico interno del clúster), como se puede ver en el siguiente diagrama:
 
 ![Estrategia de Deployment Blue/Green](images/entregable1.png)
 
