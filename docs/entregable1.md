@@ -202,7 +202,7 @@ kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"green
 # Verificar el selector del service (debería apuntar a green).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# 10. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green.
+# 10. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a green).
 http://localhost:X/docs
 
 # 11. Rollback.
@@ -211,7 +211,7 @@ kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"blue"
 # Verificar el selector del service (debería apuntar a blue).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# 12. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green.
+# 12. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a blue).
 http://localhost:X/docs
 
 minikube stop
