@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read            # principio de mínimo privilegio
 
+env:
+  APP_DIR: ci-validator-api
+  IMAGE_NAME: ci-validator-api
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -32,11 +36,11 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
-          context: ./v${{ matrix.version }}
-          file: ./Dockerfile
+          context: ./${{ env.APP_DIR }}/v${{ matrix.version }}
+          file: ./${{ env.APP_DIR }}/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ci-validator-api:${{ matrix.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/ci-validator-api:${{ matrix.version }}-${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
