@@ -1,0 +1,146 @@
+"""
+Validador de Cédula de Identidad Uruguaya (v2.1.0).
+
+Cambio v2.1.0: Métricas para Prometheus (endpoint /metrics y contador ci_validations_total).
+
+Cambio: Nuevo campo de respuesta "formatted_ci",
+representando la cédula en la formade presentación xxx.xxx-x/x.xxx.xxx-x.
+"""
+
+# --- DEPENDENCIAS ---
+
+import re
+
+from fastapi import FastAPI, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, generate_latest
+from pydantic import BaseModel
+
+
+# --- METADATA DEL DEPLOYMENT ---
+
+VERSION = "2.1.0"
+
+
+# --- REGLAS DEL NEGOCIO ---
+
+# Pesos utilizados por el DNIC uruguayo para calcular el dígito verificador a partir de la base.
+CHECK_DIGIT_WEIGHTS = (2, 9, 8, 7, 6, 3, 4)
+NON_DIGITS = re.compile(r"\D", re.ASCII)
+
+# Forma de presentación de cédula con 7 dígitos: xxx.xxx-x
+# Forma canónica de cédula con 7 dígitos: 0xxxxxxx (-> 8 números, el primero 0)
+MIN_DIGITS = 7
+
+# Forma de presentación de cédula con 8 dígitos: x.xxx.xxx-x
+# Forma canónica de cédula con 8 dígitos: xxxxxxxx (-> 8 números, el primero distinto de 0)
+MAX_DIGITS = 8 
+
+
+app = FastAPI(title="Validador de Cédula de Identidad Uruguaya", version=VERSION)
+
+
+# --- MÉTRICAS ---  NUEVO v2.1.0
+
+# Cantidad de validaciones de cédula según su resultado (se expone como ci_validations_total).
+CI_VALIDATIONS = Counter(
+    "ci_validations",
+    "Validaciones de cédula por resultado",
+    ["result"],
+)
+
+# Inicializa las series en 0 para que Prometheus las vea desde el arranque.
+for result in ("valid", "invalid_check_digit", "invalid_format"):
+    CI_VALIDATIONS.labels(result=result)
+
+
+class ValidationResult(BaseModel):
+    input: str                                  
+    normalized_ci: str | None = None            # Forma canónica de la cédula (xxxxxxxx).
+    formatted_ci: str | None = None             # NUEVO v2.0.0. Forma de presentación de cédula (xxx.xxx-x o x.xxx.xxx-x).
+    valid: bool                                 # Indica si la cédula es válida.
+    expected_check_digit: int | None = None     # Dígito verificador esperado dada la base.
+    message: str                                # Mensaje.
+    api_version: str = VERSION                  # Versión de la API.
+
+
+def calculate_check_digit(base: str) -> int:
+    """
+    Calcula el dígito verificador de la cédula a partir de la base de 7 dígitos.
+    """
+    total = 0
+    for i in range(7):
+        digit = int(base[i])
+        weight = CHECK_DIGIT_WEIGHTS[i]
+        total += digit * weight
+    return (10 - (total % 10)) % 10
+
+
+def format_ci(ci: str) -> str:  # NUEVO v2.0.0
+    """
+    Renderiza la forma canónica (xxxxxxxx) a la forma de presentación (xxx.xxx-x o x.xxx.xxx-x),
+    convención utilizada en Uruguay.
+    """
+    base, check_digit = ci[:-1], ci[-1]
+    return f"{int(base):,}".replace(",", ".") + f"-{check_digit}"
+
+
+# --- ENDPOINTS ---
+
+@app.get("/health")
+def health() -> dict:
+    return {
+        "title":"Validador de Cédula de Identidad Uruguaya",
+        "version": VERSION,
+        "status": "ok"
+    }
+
+
+@app.get("/metrics")  # NUEVO v2.1.0
+def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/ci/{number}", response_model=ValidationResult)
+def validate_ci(number: str) -> ValidationResult:
+    digits = NON_DIGITS.sub("", number)     # Elimina todo carácter que no sea un dígito.
+
+    # VALIDACIÓN 1: Tiene dígitos.
+    if not digits:
+        CI_VALIDATIONS.labels(result="invalid_format").inc()  # NUEVO v2.1.0
+        return ValidationResult(
+            input=number,
+            valid=False,
+            message="La entrada no contiene dígitos.",
+        )
+
+    # VALIDACIÓN 2: Cantidad de dígitos dentro del rango.
+    if not MIN_DIGITS <= len(digits) <= MAX_DIGITS:
+        CI_VALIDATIONS.labels(result="invalid_format").inc()  # NUEVO v2.1.0
+        return ValidationResult(
+            input=number,
+            valid=False,
+            message=(
+                f"Cantidad de dígitos inválida: ({len(digits)}); "
+                f"se espera entre {MIN_DIGITS} y {MAX_DIGITS} dígitos."
+            ),
+        )
+
+    ci = digits.zfill(8)    # Relleno para cédula de 7 dígitos (queda 0xxxxxxx)
+    base, provided_check_digit = ci[:7], int(ci[7])
+    expected_check_digit = calculate_check_digit(base)
+    valid = provided_check_digit == expected_check_digit
+    CI_VALIDATIONS.labels(result="valid" if valid else "invalid_check_digit").inc()  # NUEVO v2.1.0
+
+    return ValidationResult(
+        input=number,
+        normalized_ci=ci,
+        formatted_ci=format_ci(ci),  # NUEVO v2.0.0
+        valid=valid,
+        expected_check_digit=expected_check_digit,
+        message=(
+            "Cédula válida."
+            if valid
+            else f"Dígito verificador inválido: se esperaba {expected_check_digit}, "
+            f"pero se ingresó {provided_check_digit}"
+        ),
+    )
