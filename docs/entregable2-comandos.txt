@@ -1,0 +1,61 @@
+COMANDOS - ENTREGABLE 2
+(ejecutar desde la raiz del repo)
+
+=== MINIKUBE ===
+minikube start --driver=docker
+minikube status
+minikube stop
+
+=== DOCKER (build de la app) ===
+docker build -f ci-validator-api/Dockerfile -t ci-validator-api:2.1.0 ./ci-validator-api/v2.1.0
+docker images | grep ci-validator-api
+
+=== CARGAR IMAGEN EN MINIKUBE ===
+minikube image rm ci-validator-api:2.1.0
+minikube image load ci-validator-api:2.1.0
+minikube image ls | grep ci-validator-api
+
+=== LIMPIAR DEPLOYS ANTERIORES (blue/green) ===
+kubectl delete deployment ci-validator-api-blue ci-validator-api-green
+kubectl delete service ci-validator-api
+
+=== LEVANTAR APP ===
+kubectl apply -f ci-validator-api/deployment-entregable2.yaml -f ci-validator-api/service-entregable2.yaml
+kubectl rollout status deployment/ci-validator-api
+
+=== LEVANTAR PROMETHEUS ===
+kubectl apply -f monitoreo/prometheus/
+kubectl rollout status deployment/prometheus
+
+=== LEVANTAR GRAFANA ===
+kubectl apply -f monitoreo/grafana/
+kubectl rollout status deployment/grafana
+
+=== VER ESTADO ===
+kubectl get deploy,svc,pods
+kubectl logs deploy/ci-validator-api
+kubectl logs deploy/prometheus
+kubectl logs deploy/grafana
+
+=== ACCESO DESDE LA COMPU (una terminal por cada uno) ===
+kubectl port-forward svc/ci-validator-api 8080:80     -> http://localhost:8080/docs
+kubectl port-forward svc/prometheus 9090:9090         -> http://localhost:9090/targets
+kubectl port-forward svc/grafana 3000:3000            -> http://localhost:3000  (admin/admin)
+
+Alternativa: minikube service <nombre> --url
+
+=== GRAFANA ===
+Data source Prometheus: http://prometheus:9090
+Query alerta: sum(increase(ci_validations_total{result!="valid"}[5m])) > 20
+
+=== GENERAR TRAFICO (cedulas invalidas) ===
+for i in $(seq 1 30); do curl -s http://localhost:8080/ci/12345678 > /dev/null; done
+
+=== REINICIAR (ej: si cambia el configmap o la imagen) ===
+kubectl rollout restart deployment/prometheus
+kubectl rollout restart deployment/ci-validator-api
+
+=== BORRAR TODO ===
+kubectl delete -f monitoreo/grafana/ -f monitoreo/prometheus/
+kubectl delete -f ci-validator-api/deployment-entregable2.yaml -f ci-validator-api/service-entregable2.yaml
+minikube stop
