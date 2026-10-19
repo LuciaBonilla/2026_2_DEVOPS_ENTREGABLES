@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+  - port: 3000        # Puerto en la IP virtual interna del clúster (GrafanaClusterIP).
+    targetPort: 3000  # Puerto en la IP del pod (GrafanaPodIP); 3000 es el puerto por defecto de Grafana.
+    nodePort: 30003   # Puerto en la IP del nodo (NodeIP).

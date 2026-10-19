@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yaml: |
+    global:
+      scrape_interval: 15s                  # Cada cuánto se leen las métricas de cada objetivo.
+      evaluation_interval: 15s              # Cada cuánto se evalúan las reglas de alerta.
+
+    rule_files:
+      - /etc/prometheus/alert-rules.yaml
+
+    scrape_configs:
+      - job_name: ci-validator-api
+        kubernetes_sd_configs:
+          - role: pod                       # Descubre automáticamente todos los pods, por ello se puede conectar directamente a ellos.
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep                    # Se queda sólo con los pods app=ci-validator-api.
+            regex: ci-validator-api
+        metrics_path: /metrics
+
+  alert-rules.yaml: |
+    groups:
+      - name: ci-validator-api
+        rules:
+          # Consigna: más de X = 40 validaciones en un período de Y = 2 minutos. Expresión en PromSQL.
+          # ¿Hubo más de 40 validaciones de cédula en los últimos 2 minutos, sumando todos los pods y todos los resultados?
+          # La alerta se dispara de inmediato si hubo más de 40 validaciones en los últimos 2 minutos.
+          - alert: CIValidatorAltoVolumen
+            expr: sum(increase(ci_validator_validations_total[2m])) > 40
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Más de 40 validaciones de cédula en 2 minutos"
+              description: "Se registraron {{ $value | printf \"%.0f\" }} validaciones en los últimos 2 minutos (umbral: 40), sumando todos los pods y todos los resultados."
+ 
+          # Sin datos no hay alertas: avisa si Prometheus no logra leer ningún pod de la app.
+          # ¿Prometheus está logrando obtener métricas de al menos un pod?
+          # La alerta se dispara si la condición de alerta se mantiene un minuto.
+          - alert: CIValidatorSinTargets
+            expr: absent(up{job="ci-validator-api"} == 1)
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Prometheus no puede leer métricas de ci-validator-api"
+              description: "Ningún pod de ci-validator-api responde en /metrics desde hace más de 1 minuto."

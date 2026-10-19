@@ -1,0 +1,33 @@
+# ServiceAccount: la identidad
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+
+# ClusterRole: la lista de permisos
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  # list: pedir la lista de pods.
+  # watch: recibir un aviso cada vez que un pod se crea, cambia o se elimina. Así Prometheus se entera de los cambios sin preguntar todo el tiempo.
+  verbs: ["list", "watch"]
+---
+
+# ClusterRoleBinding: la asignación
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default

@@ -18,4 +18,4 @@ spec:
       - name: ci-validator-api-container
         image: ci-validator-api:2.1.0
         ports:
-        - containerPort: 8000
+        - containerPort: 8000 # Puerto en la IP del pod (AppPodIP); 8000 es el puerto de Uvicorn (servidor web ASGI para Python).
