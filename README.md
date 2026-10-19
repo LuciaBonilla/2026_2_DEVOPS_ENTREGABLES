@@ -14,7 +14,7 @@ Entregables para el curso DevOps de la Universidad Católica del Uruguay (año 2
 5 entregables progresivos para incorporar DevOps a nuestro flujo de desarrollo:
 
 - [x] [Entregable 1 - Aplicación en Kubernetes](docs/entregable1.md)
-- [ ] [Entregable 2 - Sistema de Monitoreo y Alertas para una Aplicación en Kubernetes](docs/entregable2.md)
+- [x] [Entregable 2 - Sistema de Monitoreo y Alertas para una Aplicación en Kubernetes](docs/entregable2.md)
 - [ ] [Entregable 3]()
 - [ ] [Entregable 4]()
 - [ ] [Entregable 5]()
