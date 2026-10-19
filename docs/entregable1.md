@@ -82,7 +82,7 @@ Body Response:
 
 La aplicación utiliza:
 
-- [FastAPI](https://fastapi.tiangolo.com/):
+- [FastAPI](https://fastapi.tiangolo.com/)
 
     FastAPI es un framework web de alto rendimiento para crear APIs de servicios basados en HTTP en Python 3.8+. Utiliza Pydantic y sugerencias de tipo para validar, serializar y deserializar datos. FastAPI también genera automáticamente documentación OpenAPI para las APIs creadas con él.
 
@@ -90,7 +90,7 @@ La aplicación utiliza:
 
     > **_Nota_** [OpenAPI](https://www.openapis.org/) es un formato estándar y abierto para describir API REST. Permite definir rutas, parámetros, métodos HTTP y respuestas en archivos legibles por humanos y máquinas usando YAML o JSON, sin importar el lenguaje de programación.
 
-- [Uvicorn](https://uvicorn.dev/):
+- [Uvicorn](https://uvicorn.dev/)
 
     Uvicorn es una implementación de servidor web ASGI (Asynchronous Server Gateway Interface) para Python.
 
@@ -150,23 +150,29 @@ Los siguientes comandos fueron ejecutados en PowerShell (>v6.0):
 ```bash
 cd ci-validator-api
 
-# 1. Build de imágenes Docker.
+# Para comenzar en limpio minikube.
+minikube delete --all --purge
+
+=== 1. Build de imágenes Docker ===
 docker build -f Dockerfile -t ci-validator-api:1.0.0 ./v1.0.0
 docker build -f Dockerfile -t ci-validator-api:2.0.0 ./v2.0.0
 
-# 2. Iniciar Minikube.
+# Ver imágenes de Docker.
+docker images
+
+=== 2. Iniciar Minikube ===
 minikube start --driver=docker
 
-# 3. Transferir las imágenes locales Docker a Minikube.
+=== 3. Transferir las imágenes locales Docker a Minikube ===
 minikube image load ci-validator-api:1.0.0
 minikube image load ci-validator-api:2.0.0
 
 # Ver imágenes en minikube.
 minikube image ls
 
-# 4. Crear pod con un contenedor con la versión blue (1.0.0) y otro pod con la versión green (2.0.0).
-kubectl apply -f deployment-blue.yaml
-kubectl apply -f deployment-green.yaml
+=== 4. Crear pod con un contenedor con la versión blue (v1.0.0) y otro pod con la versión green (v2.0.0) ===
+kubectl apply -f ./k8s-entregable1/deployment-blue.yaml
+kubectl apply -f ./k8s-entregable1/deployment-green.yaml
 
 # Ver status de los deployments.
 kubectl rollout status deployment/ci-validator-api-blue
@@ -179,40 +185,58 @@ kubectl get pods
 kubectl get pods -l app=ci-validator-api,version=blue -o jsonpath='{.items[0].spec.containers[0].image}'
 kubectl get pods -l app=ci-validator-api,version=green -o jsonpath='{.items[0].spec.containers[0].image}'
 
-# 5. Crear servicio para redirigir tráfico a blue y luego a green (inicialmente se redirige a blue).
-kubectl apply -f service.yaml
+=== 5. Crear servicio para redirigir tráfico a blue y luego a green (inicialmente se redirige a blue) ===
+kubectl apply -f ./k8s-entregable1/service.yaml
 
 # Verificar el selector del service (debería apuntar a blue).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# 6. Abrir dos terminales para ver los logs de ambos pods.
+=== 6. Abrir dos terminales para ver los logs de ambos pods ===
 kubectl logs -f -l version=blue --prefix --max-log-requests=10
 kubectl logs -f -l version=green --prefix --max-log-requests=10
 
-# 7. En otra terminal, levantar el túnel para conectarse al pod.
+=== 7. En otra terminal, levantar el túnel para conectarse al pod ===
 minikube service ci-validator-api --url
-# Esto dará la URL para conectarse al pod, que es algo como http://localhost:X, X siendo un número de puerto cualquiera.
+# Suelta un URL aleatoria del estilo http://localhost:X donde X es un número de puerto aleatorio.
 
-# 8. Enviar tráfico y revisar los logs de las otras terminales (deberían llegar peticiones a blue).
+=== 8. Enviar tráfico y revisar los logs de las otras terminales (deberían llegar peticiones a blue) ===
+# Por Swagger UI
 http://localhost:X/docs
+# O con curl.exe
+curl.exe -X GET http://localhost:X/health
+curl.exe -X GET http://localhost:X/ci/55370331
+curl.exe -X GET http://localhost:X/ci/123
 
-# 9. En otra terminal, cambiar el selector del service de blue a green.
+=== 9. En otra terminal, cambiar el selector del service de blue a green ===
 kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"green"}}}'
 
 # Verificar el selector del service (debería apuntar a green).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# 10. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a green).
+=== 10. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a green) ===
+# Por Swagger UI
 http://localhost:X/docs
+# O con curl.exe
+curl.exe -X GET http://localhost:X/health
+curl.exe -X GET http://localhost:X/ci/55370331
+curl.exe -X GET http://localhost:X/ci/123
 
-# 11. Rollback.
+=== 11. Rollback ===
+# Cambiar el selector del service a blue.
 kubectl patch service ci-validator-api -p '{"spec":{"selector":{"version":"blue"}}}'
 
 # Verificar el selector del service (debería apuntar a blue).
 kubectl get service ci-validator-api -o jsonpath='{.spec.selector.version}'
 
-# 12. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a blue).
+=== 12. Enviar el tráfico de nuevo y ver los logs en la terminal de blue y green (ahora deberían llegar peticiones a blue) ===
+# Por Swagger UI
 http://localhost:X/docs
+# O con curl.exe
+curl.exe -X GET http://localhost:X/health
+curl.exe -X GET http://localhost:X/ci/55370331
+curl.exe -X GET http://localhost:X/ci/123
 
+# Para dejar limpio minikube.
 minikube stop
+minikube delete --all --purge
 ```
