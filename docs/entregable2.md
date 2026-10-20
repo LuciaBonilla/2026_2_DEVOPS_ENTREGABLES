@@ -37,7 +37,7 @@ El sistema de monitoreo y alertas para la aplicación utiliza:
     - PromQL: Cuenta con su propio lenguaje de consulta flexible para analizar, filtrar y procesar los datos numéricos acumulados.
     - Alertmanager: Prometheus evalúa de forma automatizada las reglas de alerta mediante consultas PromQL. Cuando una métrica supera un umbral (por ejemplo, el uso de CPU > 90%), dispara la alerta y se la envía a Alertmanager. Este es el módulo encargado de recibir las alertas generadas por Prometheus y gestionarlas (agruparlas, silenciarlas o enviarlas por canales como Slack, PagerDuty o correo).
     
-    > **_Nota_** En este caso, no usaremos Alertmanager.
+    > **_Nota_** En este caso, no usaremos Alertmanager porque solo generamos alertas, pero no las acciones cuando se disparan.
 
 - [Grafana](https://grafana.com/docs/)
 
@@ -54,17 +54,18 @@ Se utiliza:
 
 - Prometheus para recopilar las métricas de las aplicaciones y los pods, y generar las alertas ([definidas aquí](../ci-validator-api/k8s-entregable2/monitoring/prometheus/configmap.yaml)).
 - Grafana se encarga de la visualización de los datos que brinda Prometheus.
-- La aplicación ([ci-validator-api v2.1.0](../ci-validator-api/v2.1.0/main.py)) expone un endpoint que responde con las métricas por defecto y las creadas por nosotros. La aplicación utiliza la librería prometheus-client para hacerlo.
+- La aplicación ([ci-validator-api v2.1.0](../ci-validator-api/v2.1.0/main.py)) expone un endpoint que responde con las métricas por defecto y las creadas por nosotros. La aplicación utiliza la librería [prometheus-client](https://pypi.org/project/prometheus-client/) para hacerlo.
 
 ### Arquitectura
 
 ![Sistema de monitoreo y alerta con Minikube](images/entregable2.png)
+> **_Nota_** Véase los [manifiestos k8s del entregable 2](../ci-validator-api/k8s-entregable2/monitoring/) para entender la arquitectura.
 
 ### Métricas
 
 Una métrica es un valor numérico cuantitativo que se recopila en tiempo real (o de forma periódica) para medir el rendimiento, el uso de recursos y el comportamiento de una aplicación, servidor o sistema operativo.
 
-Las métricas están definidas en el [código de la aplicación](../ci-validator-api/v2.1.0/main.py).
+Las métricas que creamos están definidas en el [código de la aplicación](../ci-validator-api/v2.1.0/main.py), mientras que las por defecto están definidas en la librería de prometheus-client.
 
 En este caso, las métricas son:
 
@@ -94,7 +95,6 @@ En este caso, las métricas son:
     - Dominio: Saturación
 
 > **_Nota_** El endpoint `/health` no se incluye en las métricas HTTP porque sesga el rendimiento de la aplicación (ej. haciendo parecer que la API es mucho más rápida, ya que `/health` responde en apenas un milisegundo); además, tampoco se incluye el endpoint `/metrics` porque Prometheus está periódicamente consultando. Ambos endpoints inflarían el tráfico medido, y diluirían la tasa de errores y la latencia agregadas.
-
 
 ## Comandos e Instrucciones para Probar el Sistema de Monitoreo y Alerta
 
@@ -166,7 +166,7 @@ Antes de crear dashboards, Grafana necesita saber dónde está Prometheus:
 
 1. En el menú lateral, entrar a Connections → View configured data sources → Add new data source y elegir Prometheus.
 2. En Prometheus server URL escribir http://prometheus:9090. Es el nombre del Service de Prometheus más su port.
-3. En la sección Interval behaviour, poner Scrape interval en 15s, el cual es el mismo intervalo de lectura de Prometheus (scrape interval). Grafana lo usa para calcular $__rate_interval más adelante.
+3. En la sección Interval behaviour, poner Scrape interval en 15s, el cual es el mismo intervalo de lectura de Prometheus (scrape interval) que se definió [aquí](../ci-validator-api/k8s-entregable2/monitoring/prometheus/configmap.yaml). Grafana lo usa para calcular $__rate_interval más adelante.
 4. Pulsar Save & test. Debe aparecer un mensaje de éxito indicando que pudo consultar la API de Prometheus.
 
 ### Creación de Dashboard y Paneles
@@ -180,9 +180,9 @@ Antes de crear dashboards, Grafana necesita saber dónde está Prometheus:
 
 - Requisito: El datasource Prometheus debe tener Scrape interval en 15s, para que `$__rate_interval` funcione bien.
 
-El archivo [dashboard.yaml](../ci-validator-api/k8s-entregable2/dashboard.yaml) contiene todos el dashboard configurado.
+El archivo [dashboard.yaml](../ci-validator-api/k8s-entregable2/dashboard.yaml) contiene todo el dashboard configurado; listo para importación.
 
-Estos son los paneles del dashboard:
+Estos son los paneles del dashboard que creamos:
 
 - Cantidad total de validaciones en los últimos 2 min
     - Visualización: Stat | Unidad: Number | Decimales: 0
@@ -260,9 +260,9 @@ Test simple para comprobar que saltan las alertas y que el dashboard muestra los
 
 Así se ve el dashboard sin enviar nada de tráfico a la aplicación en este instante:
 
-![alt text](images/dashboard/image.png)
+![alt text](./images/dashboard/image.png)
 
-![alt text](images/dashboard/image-1.png)
+![alt text](./images/dashboard/image-1.png)
 
 Al ejecutar en la terminal:
 
@@ -270,14 +270,14 @@ Al ejecutar en la terminal:
 1..200 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ci/1.234.567-2"; Start-Sleep -Milliseconds 100 }
 ```
 
-Luego de unos pocos segundos, el dashboard reflejó el estado del sistema ante estrés:
+Luego de unos pocos segundos, el dashboard reflejó el estado del sistema ante estrés y mostró que se generó una alerta (Prometheus generó la alert; Grafana la mostró):
 
-![alt text](images/dashboard/image-2.png)
+![alt text](./images/dashboard/image-2.png)
 
-![alt text](images/dashboard/image-3.png)
+![alt text](./images/dashboard/image-3.png)
 
-Luego, al detenerse el tráfico, detectó que el sistema se estabilizó:
+Luego, al detenerse el tráfico, detectó que el sistema se estabilizó y que no había ninguna alerta disparada:
 
-![alt text](images/dashboard/image-4.png)
+![alt text](./images/dashboard/image-4.png)
 
-![alt text](images/dashboard/image-5.png)
+![alt text](./images/dashboard/image-5.png)
