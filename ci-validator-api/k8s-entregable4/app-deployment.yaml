@@ -1,0 +1,28 @@
+# Igual que k8s-entregable2/app-deployment.yaml, pero con la imagen 2.1.1 (la que construye Jenkins).
+# Se aplica después de k8s-entregable2/app-service.yaml (el Service no cambia).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-validator-api
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: ci-validator-api
+
+  template:
+    metadata:
+      labels:
+        app: ci-validator-api
+    spec:
+      containers:
+      - name: ci-validator-api-container
+        image: ci-validator-api:2.1.1
+        ports:
+        - containerPort: 8000 # Puerto en la IP del pod (AppPodIP); 8000 es el puerto de Uvicorn.
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          periodSeconds: 5

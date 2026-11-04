@@ -16,5 +16,5 @@ Entregables para el curso DevOps de la Universidad Católica del Uruguay (año 2
 - [x] [Entregable 1 - Aplicación en Kubernetes](docs/entregable1.md)
 - [x] [Entregable 2 - Sistema de Monitoreo y Alertas para una Aplicación en Kubernetes](docs/entregable2.md)
 - [ ] [Entregable 3 - DevSecOps para una Aplicación en Kubernetes](docs/entregable3.md)
-- [ ] [Entregable 4 - Pipeline en Jenkins para una Aplicación en Kubernetes](docs/entregable4.md)
+- [x] [Entregable 4 - Trabajo integrador (Jenkins, Prometheus y Grafana)](docs/entregable4.md)
 - [ ] [Entregable 5 - Reporte Final](docs/entregable5.md)

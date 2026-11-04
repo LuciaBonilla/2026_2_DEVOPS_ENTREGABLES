@@ -1,0 +1,32 @@
+# Configuración de Jenkins como código: usuario admin y el job del pipeline ya creado.
+jenkins:
+  systemMessage: "Jenkins - Entregable 4 (ci-validator-api)"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: ${JENKINS_ADMIN_PASSWORD:-admin}
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: http://localhost:8080/
+
+jobs:
+  - script: >
+      pipelineJob('ci-validator-api') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('file:///repo') }
+                branch('*/feature/entregable4')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+      }
