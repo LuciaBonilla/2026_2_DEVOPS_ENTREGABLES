@@ -100,7 +100,7 @@ Requisitos: Docker Desktop, minikube, kubectl.
 | http://localhost:9090/targets | jobs `ci-validator-api` y `cadvisor` en `UP` |
 | http://localhost:3000 (admin/admin) | dashboard "CI Validator API - Entregable 4" con datos |
 | http://localhost:9090/alerts | `CIValidatorAltoVolumen` en `Firing` |
-| http://localhost:8080 (admin/admin) → `ci-validator-api` → Build with Parameters | etapas en verde |
+| http://localhost:8080 (admin/admin) → `ci-validator-api` → Build Now (la primera vez; luego Build with Parameters) | etapas en verde |
 
 (Agregar aquí capturas/salidas obtenidas.)
 

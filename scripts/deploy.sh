@@ -11,6 +11,10 @@ kubectl create configmap grafana-dashboard --from-file="$ROOT/grafana/dashboard.
 kubectl apply -f "$E2/app-service.yaml" -f "$E2/monitoring/prometheus/" -f "$E2/monitoring/grafana/service.yaml"
 kubectl apply -f "$ROOT/ci-validator-api/k8s-entregable4/"
 
+# Los Deployments blue/green del entregable 1 comparten el label app=ci-validator-api con la app actual:
+# si siguen activos, el Service y Prometheus mezclan sus pods (v1.x, sin /metrics) con los de v2.1.1.
+kubectl scale deployment/ci-validator-api-blue deployment/ci-validator-api-green --replicas=0 2>/dev/null || true
+
 # Los ConfigMap montados no se recargan solos.
 kubectl rollout restart deployment/prometheus deployment/grafana
 kubectl rollout status deployment/ci-validator-api deployment/prometheus deployment/grafana --timeout=180s

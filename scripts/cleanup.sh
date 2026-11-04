@@ -6,7 +6,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_FILE="${TMPDIR:-/tmp}/ci-validator-portforward.pids"
 E2="$ROOT/ci-validator-api/k8s-entregable2"
 
-[[ -f "$PID_FILE" ]] && xargs kill < "$PID_FILE" 2>/dev/null; rm -f "$PID_FILE"
+# Cada PID es un bucle de reintento: se matan sus kubectl hijos y luego el bucle.
+if [[ -f "$PID_FILE" ]]; then
+  while read -r pid; do pkill -P "$pid" 2>/dev/null || true; kill "$pid" 2>/dev/null || true; done < "$PID_FILE"
+fi
+rm -f "$PID_FILE" "${TMPDIR:-/tmp}/ci-validator-portforward.log"
 
 JENKINS_KUBECONFIG="$HOME/.kube/jenkins-minikube-config" REPO_DIR="$ROOT" \
   docker compose -f "$ROOT/jenkins/docker-compose.yml" down -v || true
