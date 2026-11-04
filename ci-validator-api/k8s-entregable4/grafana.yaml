@@ -1,5 +1,3 @@
-# Reemplaza el Deployment de Grafana de k8s-entregable2 (mismo nombre), con datasource y dashboard provisionados.
-# El ConfigMap grafana-dashboard lo crea scripts/deploy.sh desde grafana/dashboard.json.
 apiVersion: v1
 kind: ConfigMap
 metadata:

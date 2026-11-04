@@ -1,5 +1,3 @@
-# Reemplaza (mismo nombre) el ClusterRole y el ConfigMap de Prometheus de k8s-entregable2.
-# Cambios: permisos para leer cAdvisor y job "cadvisor" (CPU/memoria por pod).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
