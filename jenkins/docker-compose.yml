@@ -1,0 +1,29 @@
+# Jenkins para el pipeline del entregable 4.
+# Antes de levantarlo, scripts/start-components.sh genera el kubeconfig que apunta a minikube
+# (variable JENKINS_KUBECONFIG) y exporta REPO_DIR.
+services:
+  jenkins:
+    build: .
+    image: ci-validator-jenkins:1
+    container_name: jenkins
+    user: root                    # Necesario para usar el socket de Docker del host (laboratorio local).
+    ports:
+      - "8080:8080"
+    environment:
+      JENKINS_ADMIN_PASSWORD: admin
+      KUBECONFIG: /kube/config
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${JENKINS_KUBECONFIG}:/kube/config:ro
+      - ${REPO_DIR:-..}:/repo:ro
+    networks:
+      - default
+      - minikube                  # Red de Docker de minikube: permite alcanzar su API server.
+
+volumes:
+  jenkins_home:
+
+networks:
+  minikube:
+    external: true
