@@ -1,0 +1,21 @@
+
+=== kubectl apply -f entregable3/k8s/non-compliant/01-latest-tag.yaml ===
+Error from server: error when creating "entregable3/k8s/non-compliant/01-latest-tag.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-latest-tag failed: No se permite la etiqueta latest; use una versión fija (por ejemplo, :2.1.1). Con latest: ci-validator-api:latest
+
+=== kubectl apply -f entregable3/k8s/non-compliant/02-no-tag.yaml ===
+Error from server: error when creating "entregable3/k8s/non-compliant/02-no-tag.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-latest-tag failed: Las imágenes deben tener una etiqueta explícita (sin etiqueta se usa latest). Sin etiqueta: ci-validator-api
+
+=== kubectl apply -f entregable3/k8s/non-compliant/03-no-limits.yaml ===
+Error from server: error when creating "entregable3/k8s/non-compliant/03-no-limits.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy require-requests-limits failed: Todo contenedor debe definir resources.requests y resources.limits de cpu y memory. No cumplen: app
+
+=== kubectl apply -f entregable3/k8s/non-compliant/04-root.yaml ===
+Error from server: error when creating "entregable3/k8s/non-compliant/04-root.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-root-containers failed: securityContext.runAsNonRoot debe ser true (en el pod o en cada contenedor) y no puede ser false en el pod. No cumplen: app
+
+=== kubectl apply -f entregable3/k8s/non-compliant/05-run-as-user-0.yaml ===
+Error from server: error when creating "entregable3/k8s/non-compliant/05-run-as-user-0.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-root-containers failed: securityContext.runAsUser no puede ser 0 (root). No cumplen: spec.securityContext del pod
+
+=== kubectl apply -f entregable2/k8s/app/deployment.yaml ===
+Error from server: error when creating "entregable2/k8s/app/deployment.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-root-containers failed: securityContext.runAsNonRoot debe ser true (en el pod o en cada contenedor) y no puede ser false en el pod. No cumplen: ci-validator-api-container; Policy require-requests-limits failed: Todo contenedor debe definir resources.requests y resources.limits de cpu y memory. No cumplen: ci-validator-api-container
+
+=== kubectl run nc-kubectl-run --image=nginx ===
+Error from server: admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-root-containers failed: securityContext.runAsNonRoot debe ser true (en el pod o en cada contenedor) y no puede ser false en el pod. No cumplen: nc-kubectl-run; Policy require-requests-limits failed: Todo contenedor debe definir resources.requests y resources.limits de cpu y memory. No cumplen: nc-kubectl-run; Policy disallow-latest-tag failed: Las imágenes deben tener una etiqueta explícita (sin etiqueta se usa latest). Sin etiqueta: nginx

@@ -1,0 +1,74 @@
+running 1074 rules from 1 config remote-registry_0
+Rules:
+<SKIPPED DATA (too many entries; use --max-log-list-entries)>
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 3 files with 1074 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>      47       3          Community    1074                                                                
+  python          243       1                                                                                           
+  dockerfile        6       1                                                                                           
+                                                                                                                        
+SCA findings adjustment: No SCA rules to adjust
+
+========================================
+Files skipped:
+========================================
+
+  Always skipped by Semgrep:
+
+   • <none>
+
+  Skipped by .gitignore:
+  (Disabled with --no-git-ignore)
+
+   • <none>
+
+  Skipped by .semgrepignore:
+  - https://semgrep.dev/docs/ignoring-files-folders-code/#understand-semgrep-defaults
+
+   • <none>
+
+  Skipped by --include patterns:
+
+   • <none>
+
+  Skipped by --exclude patterns:
+
+   • <none>
+
+  Files that couldn't be accessed:
+
+   • <none>
+
+  Skipped by limiting to files smaller than 1000000 bytes:
+  (Adjust with the --max-target-bytes flag)
+
+   • <none>
+
+  Partially analyzed due to parsing or internal Semgrep errors
+
+   • <none>
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 296
+ • Targets scanned: 3
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 296 rules on 3 files: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+Sending pseudonymous metrics since metrics are configured to AUTO, registry usage is True, and login status is False

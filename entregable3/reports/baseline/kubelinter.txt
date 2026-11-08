@@ -1,0 +1,16 @@
+KubeLinter 0.8.3
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) object has 3 replicas but does not specify inter pod anti-affinity (check: no-anti-affinity, remediation: Specify anti-affinity in your pod specification to ensure that the orchestrator attempts to schedule replicas on different nodes. Using podAntiAffinity, specify a labelSelector that matches pods for the deployment, and set the topologyKey to kubernetes.io/hostname. Refer to https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity for details.)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" does not have a read-only root file system (check: no-read-only-root-fs, remediation: Set readOnlyRootFilesystem to true in the container securityContext.)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" is not set to runAsNonRoot (check: run-as-non-root, remediation: Set runAsUser to a non-zero number and runAsNonRoot to true in your pod or container securityContext. Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ for details.)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has cpu limit 0 (check: unset-cpu-limit, remediation: Definir resources.limits.cpu (lo exige la política require-requests-limits).)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has cpu request 0 (check: unset-cpu-requirements, remediation: Set CPU requests for your container based on its requirements. Refer to https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits for details.)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has memory request 0 (check: unset-memory-request, remediation: Definir resources.requests.memory (lo exige la política require-requests-limits).)
+
+/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has memory limit 0 (check: unset-memory-requirements, remediation: Set memory limits for your container based on its requirements. Refer to https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits for details.)
+

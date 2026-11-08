@@ -1,5 +1,7 @@
 """
-Validador de Cédula de Identidad Uruguaya (v2.1.0).
+Validador de Cédula de Identidad Uruguaya (v2.1.1).
+
+Cambio v2.1.1: Fix vulnerabilidad de Dockerfile.
 
 Cambio v2.1.0: Métricas para Prometheus.
   - Endpoint GET /metrics con el formato de exposición de Prometheus.
@@ -35,7 +37,7 @@ from starlette.routing import Match  # NUEVO v2.1.0
 
 # --- METADATA DEL DEPLOYMENT ---
 
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 
 
 
@@ -125,15 +127,15 @@ HTTP_REQUESTS = Counter(
     labelnames=["method", "route", "status"],
 )
  
-# Latencia: Duración de las peticiones HTTP, por método y ruta.
+# Latencia: Duración de las peticiones HTTP, por método y ruta, en segundos.
 # Los buckets son los límites superiores (en milisegundos) de cada rango;
-# están concentrados entre 0ms y 20ms, donde se espera la latencia de esta API simple.
+# están concentrados entre 0,5ms y 3ms, donde se espera la latencia de esta API simple.
 HTTP_REQUEST_DURATION = Histogram(
     name="ci_validator_http_request_duration_seconds",
-    documentation="Duración del procesamiento de las peticiones HTTP, en milisegundos.",
+    documentation="Duración del procesamiento de las peticiones HTTP, en segundos.",
     labelnames=["method", "route"],
-    buckets=(2.5, 5.0, 7.5, 10, 12.5, 15.0, 17.5, 20.0),
-)
+    buckets=(0.0005, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25),
+) # 0,5ms - 1,0ms - 1,5ms - 2,0ms - 3,0ms - 5,0ms - 10ms - 25ms - 50ms - 100ms - 250ms
  
 # Saturación: Cantidad de peticiones que se están procesando en este instante, por método y ruta.
 # Gauge es como un contador, pero que puede además puede decrecer o cambiarse arbitrariamente su valor.

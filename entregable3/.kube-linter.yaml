@@ -1,0 +1,21 @@
+# Configuración de KubeLinter para el entregable 3.
+# Se mantienen todos los checks por defecto y se agregan dos checks propios para que el linter exija
+# lo mismo que la política require-requests-limits de Kyverno. Por defecto KubeLinter solo exige
+# requests de CPU (unset-cpu-requirements) y limits de memoria (unset-memory-requirements).
+customChecks:
+  - name: unset-cpu-limit
+    description: Indica contenedores sin limits de CPU.
+    remediation: Definir resources.limits.cpu (lo exige la política require-requests-limits).
+    template: cpu-requirements
+    params:
+      requirementsType: limit
+      lowerBoundMillis: 0
+      upperBoundMillis: 0
+  - name: unset-memory-request
+    description: Indica contenedores sin requests de memoria.
+    remediation: Definir resources.requests.memory (lo exige la política require-requests-limits).
+    template: memory-requirements
+    params:
+      requirementsType: request
+      lowerBoundMB: 0
+      upperBoundMB: 0

@@ -1,0 +1,20 @@
+# NO CONFORME con la política 1 (disallow-latest-tag): imagen sin etiqueta.
+# Sin etiqueta, Kubernetes usa latest de forma implícita (y además imagePullPolicy: Always).
+# Es un Pod "suelto" (sin Deployment): lo evalúa directamente la regla base de la política.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nc-no-tag
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    runAsGroup: 101
+  containers:
+  - name: app
+    image: ci-validator-api   # <-- VIOLACIÓN
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 128Mi}
+    securityContext:
+      allowPrivilegeEscalation: false

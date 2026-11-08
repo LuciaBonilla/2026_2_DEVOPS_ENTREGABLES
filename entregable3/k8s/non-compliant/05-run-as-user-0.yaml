@@ -1,0 +1,20 @@
+# NO CONFORME con la política 3 (disallow-root-containers): pide UID 0 de forma explícita.
+# runAsNonRoot es true, así que el kubelet tampoco lo arrancaría;
+# la política lo rechaza antes, en la admisión, con un mensaje claro.
+# Cumple las políticas 1 y 2.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nc-run-as-user-0
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 0   # <-- VIOLACIÓN
+  containers:
+  - name: app
+    image: ci-validator-api:2.1.1
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 128Mi}
+    securityContext:
+      allowPrivilegeEscalation: false

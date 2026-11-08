@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus                # UID fijo: el dashboard lo referencia
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090    # nombre y puerto del Service de Prometheus
+        isDefault: true
+        jsonData:
+          timeInterval: 15s            # "Scrape interval": igual al scrape_interval de Prometheus

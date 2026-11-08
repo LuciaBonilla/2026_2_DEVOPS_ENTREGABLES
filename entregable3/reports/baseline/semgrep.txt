@@ -1,0 +1,87 @@
+running 1074 rules from 1 config remote-registry_0
+Rules:
+<SKIPPED DATA (too many entries; use --max-log-list-entries)>
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 3 files with 1074 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>      47       3          Community    1074                                                                
+  python          243       1                                                                                           
+  dockerfile        6       1                                                                                           
+                                                                                                                        
+SCA findings adjustment: No SCA rules to adjust
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                      
+    ci-validator-api/v2.1.0/Dockerfile
+   ❯❯❱ dockerfile.security.missing-user.missing-user
+          ❰❰ Blocking ❱❱
+          By not specifying a USER, a program in the container may run as 'root'. This is a security hazard.
+          If an attacker can control a process running as root, they may have control over the container.   
+          Ensure that the last USER in a Dockerfile is a USER other than 'root'.                            
+          Details: https://sg.run/Gbvn                                                                      
+                                                                                                            
+           ▶▶┆ Autofix ▶ USER non-root CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+           12┆ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+========================================
+Files skipped:
+========================================
+
+  Always skipped by Semgrep:
+
+   • <none>
+
+  Skipped by .gitignore:
+  (Disabled with --no-git-ignore)
+
+   • <none>
+
+  Skipped by .semgrepignore:
+  - https://semgrep.dev/docs/ignoring-files-folders-code/#understand-semgrep-defaults
+
+   • <none>
+
+  Skipped by --include patterns:
+
+   • <none>
+
+  Skipped by --exclude patterns:
+
+   • <none>
+
+  Files that couldn't be accessed:
+
+   • <none>
+
+  Skipped by limiting to files smaller than 1000000 bytes:
+  (Adjust with the --max-target-bytes flag)
+
+   • <none>
+
+  Partially analyzed due to parsing or internal Semgrep errors
+
+   • <none>
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 296
+ • Targets scanned: 3
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 296 rules on 3 files: 1 finding.
+Sending pseudonymous metrics since metrics are configured to AUTO, registry usage is True, and login status is False

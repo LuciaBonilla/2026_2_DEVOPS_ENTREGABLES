@@ -1,0 +1,24 @@
+# NO CONFORME con la política 3 (disallow-root-containers): se ejecutaría como root.
+# Usa la imagen v2.1.0, cuyo Dockerfile no tiene USER (el hallazgo de Semgrep de la línea base),
+# y no define securityContext: es lo que se desplegó en el entregable 2, más resources.
+# Cumple las políticas 1 y 2.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nc-root
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nc-root
+  template:
+    metadata:
+      labels:
+        app: nc-root
+    spec:
+      containers:
+      - name: app
+        image: ci-validator-api:2.1.0   # <-- VIOLACIÓN: imagen root y sin securityContext
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {cpu: 500m, memory: 128Mi}

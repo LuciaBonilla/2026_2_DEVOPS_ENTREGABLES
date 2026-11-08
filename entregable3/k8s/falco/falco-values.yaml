@@ -1,0 +1,31 @@
+# Valores de Helm para Falco (entregable 3: seguridad en tiempo de ejecución).
+#
+# Se instala en el namespace "falco". Las tres ValidatingPolicy de Kyverno excluyen ese
+# namespace (matchConstraints.namespaceSelector) porque Falco no puede cumplirlas:
+#   - el contenedor falco es privilegiado: necesita cargar su sonda eBPF en el kernel del
+#     nodo -> violaría disallow-root-containers;
+#   - los contenedores falcoctl-artifact-install y falcoctl-artifact-follow no definen
+#     resources -> violarían require-requests-limits.
+# Si se instala en otro namespace (por ejemplo default), Kyverno rechaza el DaemonSet.
+
+# Driver: sonda eBPF moderna (CO-RE). Viene compilada dentro del binario de Falco: no hay
+# que compilar ni descargar un módulo del kernel, y por eso el chart no crea el init
+# container falco-driver-loader. Requiere un kernel que exponga BTF
+# (/sys/kernel/btf/vmlinux) y soporte el ring buffer de BPF. Con minikube --driver=docker,
+# el kernel es el de la VM de Docker Desktop (WSL2); verificarlo antes de instalar.
+# Se fija de forma explícita, en lugar del valor por defecto "auto", para que el
+# resultado no dependa de una detección automática.
+driver:
+  kind: modern_ebpf
+
+# Asocia una TTY al proceso de Falco para que cada alerta se escriba en cuanto se genera.
+# Sin TTY, la salida puede quedar en un buffer y la alerta tarda en verse en kubectl logs.
+# Efecto secundario: las líneas del log suelen terminar en CRLF (\r\n).
+tty: true
+
+falco:
+  # Cada alerta es una línea JSON con el nombre de la regla ("rule"), la prioridad
+  # ("priority"), las etiquetas MITRE ATT&CK ("tags") y los campos del evento
+  # ("output_fields": pod, namespace, UID, proceso, proceso padre, terminal).
+  # Se puede filtrar por regla sin depender del texto del mensaje.
+  json_output: true

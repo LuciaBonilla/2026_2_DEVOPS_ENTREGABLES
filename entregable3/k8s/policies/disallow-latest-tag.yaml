@@ -1,0 +1,87 @@
+# Política 1 de la consigna: prohibir el uso de imágenes con la etiqueta latest.
+#
+# Tipo ValidatingPolicy (policies.kyverno.io/v1): es el tipo estable de Kyverno.
+# ClusterPolicy (kyverno.io/v1) está deprecado.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Prohibir la etiqueta latest
+    policies.kyverno.io/category: Buenas prácticas
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      latest es una etiqueta mutable: la misma referencia puede apuntar a imágenes distintas
+      a lo largo del tiempo, lo que impide saber qué versión corre y hacer rollback.
+      Toda imagen debe indicar una etiqueta explícita distinta de latest, o un digest.
+spec:
+  # Kyverno bloqueará de forma inmediata y estricta la creación o modificación del recurso defectuoso.
+  validationActions: [Deny]
+
+  # Además de evaluar en la admisión, Kyverno revisa periódicamente los recursos que ya existen
+  # y deja el resultado en PolicyReports (kubectl get policyreport -A).
+  evaluation:
+    background:
+      enabled: true
+
+  matchConstraints:
+    # Namespaces excluidos. Necesitan "permisos especiales" que romperían una política de seguridad estricta.
+    # kube-system y kyverno contienen componentes del clúster y de Kyverno;
+    # falco necesita contenedores privilegiados (sección de seguridad en tiempo de ejecución).
+    # La etiqueta kubernetes.io/metadata.name la pone Kubernetes en todo namespace.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, kyverno, falco]
+
+    # Solo pods.
+    # Con una única regla que coincide únicamente con pods, Kyverno activa el "autogen":
+    # genera reglas equivalentes para Deployment, StatefulSet, DaemonSet, ReplicaSet, Job y CronJob
+    # (reescribe object.spec como object.spec.template.spec). Así se rechaza el Deployment completo,
+    # en lugar de aceptarlo y que después fallen en silencio los pods que crea su ReplicaSet.
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+
+  variables:
+    # Todos los contenedores del pod.
+    # El operador ?. con orValue([]) devuelve una lista vacía
+    # si el campo no existe (por ejemplo, un pod sin initContainers).
+    - name: containers
+      expression: >-
+        object.spec.containers +
+        object.spec.?initContainers.orValue([]) +
+        object.spec.?ephemeralContainers.orValue([])
+
+    # Imágenes sin etiqueta ni digest.
+    # Sin etiqueta, Kubernetes usa latest de forma implícita.
+    # Se mira solo lo que está después de la última "/" para no confundir el puerto de un registro
+    # (localhost:5000/app) con una etiqueta.
+    - name: untaggedImages
+      expression: >-
+        variables.containers
+          .filter(c, !c.image.contains('@') &&
+                     !c.image.substring(c.image.lastIndexOf('/') + 1).contains(':'))
+          .map(c, c.image)
+
+    # Imágenes con la etiqueta latest explícita.
+    - name: latestImages
+      expression: >-
+        variables.containers
+          .filter(c, c.image.endsWith(':latest'))
+          .map(c, c.image)
+
+  validations:
+    - expression: size(variables.untaggedImages) == 0
+      messageExpression: >-
+        'Las imágenes deben tener una etiqueta explícita (sin etiqueta se usa latest). Sin etiqueta: ' +
+        variables.untaggedImages.join(', ')
+
+    - expression: size(variables.latestImages) == 0
+      messageExpression: >-
+        'No se permite la etiqueta latest; use una versión fija (por ejemplo, :2.1.1). Con latest: ' +
+        variables.latestImages.join(', ')

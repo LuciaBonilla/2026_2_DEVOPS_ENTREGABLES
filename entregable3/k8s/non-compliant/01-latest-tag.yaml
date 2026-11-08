@@ -1,0 +1,29 @@
+# NO CONFORME con la política 1 (disallow-latest-tag): imagen con la etiqueta latest.
+# Cumple las políticas 2 y 3, así que el rechazo solo puede venir de la 1.
+# Es un Deployment: gracias al autogen de Kyverno se rechaza el Deployment entero en la admisión.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nc-latest-tag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nc-latest-tag
+  template:
+    metadata:
+      labels:
+        app: nc-latest-tag
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+      containers:
+      - name: app
+        image: ci-validator-api:latest   # <-- VIOLACIÓN
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {cpu: 500m, memory: 128Mi}
+        securityContext:
+          allowPrivilegeEscalation: false

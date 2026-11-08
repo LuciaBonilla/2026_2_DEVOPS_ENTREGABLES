@@ -1,0 +1,93 @@
+# Política 3 de la consigna: impedir la ejecución de contenedores como root.
+#
+# Tres controles complementarios:
+#   1. runAsNonRoot: true   -> el kubelet se niega a arrancar el contenedor si su UID efectivo es 0.
+#   2. runAsUser distinto de 0 -> rechaza en la admisión una configuración que pide root de forma explícita.
+#   3. allowPrivilegeEscalation: false -> activa no_new_privs en el kernel: un proceso no-root no puede
+#      convertirse en root ejecutando binarios setuid (su, mount, passwd...). Sin este control,
+#      "no arrancar como root" no garantiza "no ejecutar como root".
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-root-containers
+  annotations:
+    policies.kyverno.io/title: Impedir contenedores que se ejecuten como root
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Un proceso root dentro del contenedor es root también para el kernel del nodo (salvo que se
+      usen user namespaces). Si un atacante lo controla y escapa del contenedor, obtiene privilegios
+      de root en el nodo. Se exige runAsNonRoot, se prohíbe runAsUser 0 y se prohíbe la escalada
+      de privilegios.
+spec:
+  validationActions: [Deny]
+  evaluation:
+    background:
+      enabled: true
+
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, kyverno, falco]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+
+  variables:
+    - name: containers
+      expression: >-
+        object.spec.containers +
+        object.spec.?initContainers.orValue([]) +
+        object.spec.?ephemeralContainers.orValue([])
+
+    # Valor de runAsNonRoot a nivel de pod (false si no está definido).
+    - name: podRunAsNonRoot
+      expression: object.spec.?securityContext.?runAsNonRoot.orValue(false)
+
+    # Contenedores cuyo runAsNonRoot efectivo no es true. El valor del contenedor tiene prioridad;
+    # si no lo define, hereda el del pod.
+    - name: mayRunAsRoot
+      expression: >-
+        variables.containers
+          .filter(c, c.?securityContext.?runAsNonRoot.orValue(variables.podRunAsNonRoot) != true)
+          .map(c, c.name)
+
+    # Contenedores que piden UID 0 de forma explícita.
+    - name: uidZero
+      expression: >-
+        variables.containers
+          .filter(c, c.?securityContext.?runAsUser.orValue(-1) == 0)
+          .map(c, c.name)
+
+    # Contenedores que permiten la escalada de privilegios. Si el campo no está definido,
+    # Kubernetes la permite, así que se exige false de forma explícita.
+    - name: canEscalate
+      expression: >-
+        variables.containers
+          .filter(c, c.?securityContext.?allowPrivilegeEscalation.orValue(true) != false)
+          .map(c, c.name)
+
+  validations:
+    - expression: >-
+        object.spec.?securityContext.?runAsNonRoot.orValue(true) == true &&
+        size(variables.mayRunAsRoot) == 0
+      messageExpression: >-
+        'securityContext.runAsNonRoot debe ser true (en el pod o en cada contenedor) y no puede ser false en el pod. No cumplen: ' +
+        (size(variables.mayRunAsRoot) > 0 ? variables.mayRunAsRoot.join(', ') : 'spec.securityContext del pod')
+
+    - expression: >-
+        object.spec.?securityContext.?runAsUser.orValue(-1) != 0 &&
+        size(variables.uidZero) == 0
+      messageExpression: >-
+        'securityContext.runAsUser no puede ser 0 (root). No cumplen: ' +
+        (size(variables.uidZero) > 0 ? variables.uidZero.join(', ') : 'spec.securityContext del pod')
+
+    - expression: size(variables.canEscalate) == 0
+      messageExpression: >-
+        'securityContext.allowPrivilegeEscalation debe ser false en todo contenedor. No cumplen: ' +
+        variables.canEscalate.join(', ')

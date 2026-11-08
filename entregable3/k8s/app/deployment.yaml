@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-validator-api
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: ci-validator-api
+
+  template:
+    metadata:
+      labels:
+        app: ci-validator-api
+    spec:
+      # La app no usa la API de Kubernetes: no se monta el token de la ServiceAccount.
+      # Si un atacante obtiene una shell en el pod, no tiene credenciales para hablar con la API de k8s.
+      automountServiceAccountToken: false
+
+      # Contexto de seguridad del pod: lo heredan todos sus contenedores.
+      securityContext:
+        runAsNonRoot: true   # Política 3: el kubelet no arranca el contenedor si su UID efectivo es 0 (root).
+        # VERIFICAR con: docker run --rm ci-validator-api:2.1.1 id
+        # El Dockerfile de v2.1.1 usa "USER appuser" (un nombre, no un número). Con un nombre, el kubelet
+        # no puede comprobar que no sea root y el pod falla con CreateContainerConfigError:
+        #   "image has non-numeric user (appuser), cannot verify user is non-root".
+        # Por eso se declaran el UID y el GID numéricos de appuser y appgroup.
+        runAsUser: 100
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault   # Filtro seccomp por defecto del runtime: bloquea syscalls peligrosas.
+
+      # Reparte las réplicas en nodos distintos cuando los hay ("preferred": nunca impide el scheduling).
+      # En minikube, con un solo nodo, no tiene efecto; en un clúster de varios nodos evita que la caída
+      # de un nodo se lleve todas las réplicas.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: ci-validator-api
+
+      containers:
+      - name: ci-validator-api-container
+        image: ci-validator-api:2.1.1   # Política 1: versión fija, nunca latest.
+        imagePullPolicy: IfNotPresent    # La imagen se carga con "minikube image load"; no se descarga.
+        ports:
+        - name: http
+          containerPort: 8000 # Puerto en la IP del pod (AppPodIP); 8000 es el puerto de Uvicorn (servidor web ASGI para Python).
+
+        # Política 2. Medición de referencia (misma app y mismas dependencias, fuera de Kubernetes, como
+        # no-root, sin capabilities y con el sistema de archivos de solo lectura): ~45 MiB de memoria
+        # residente al arrancar, ~56 MiB tras 6000 peticiones y ~1 ms de CPU por petición.
+        # Contrastar con los paneles de memoria y CPU por pod del dashboard del entregable 2.
+        resources:
+          requests:
+            cpu: 50m        # 5 % de un núcleo: lo que el scheduler reserva en el nodo.
+            memory: 64Mi
+          limits:
+            cpu: 500m       # Por encima, el contenedor se ralentiza (throttling), no se reinicia.
+            memory: 128Mi   # Por encima, el kernel mata el proceso (OOMKilled) y el kubelet lo reinicia.
+
+        securityContext:
+          allowPrivilegeEscalation: false   # Política 3: no_new_privs; los binarios setuid no otorgan root.
+          readOnlyRootFilesystem: true      # Un atacante no puede modificar el código ni dejar archivos.
+          capabilities:
+            drop: ["ALL"]                   # Remueve privilegios del kernel.
+
+        # /health existe para esto, pero hasta ahora
+        # ningún manifiesto definía sondas.
+        readinessProbe:      # Si falla, el pod sale de los endpoints del Service (no recibe tráfico).
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:       # Si falla 3 veces seguidas, el kubelet reinicia el contenedor.
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3

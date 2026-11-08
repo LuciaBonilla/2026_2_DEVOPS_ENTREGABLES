@@ -1,0 +1,27 @@
+# NO CONFORME con la política 2 (require-requests-limits): define requests pero no limits.
+# Cumple las políticas 1 y 3.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nc-no-limits
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nc-no-limits
+  template:
+    metadata:
+      labels:
+        app: nc-no-limits
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+      containers:
+      - name: app
+        image: ci-validator-api:2.1.1
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}   # <-- VIOLACIÓN: faltan limits
+        securityContext:
+          allowPrivilegeEscalation: false

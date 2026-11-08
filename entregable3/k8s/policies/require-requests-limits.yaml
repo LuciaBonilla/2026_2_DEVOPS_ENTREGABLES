@@ -1,0 +1,57 @@
+# Política 2 de la consigna: exigir límites y solicitudes de recursos en todos los pods.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-requests-limits
+  annotations:
+    policies.kyverno.io/title: Exigir requests y limits de CPU y memoria
+    policies.kyverno.io/category: Buenas prácticas
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      requests es lo que el scheduler reserva en el nodo para el contenedor; limits es el máximo
+      que puede consumir. Sin limits, un contenedor con una fuga de memoria o un pico de CPU
+      puede dejar sin recursos al resto del nodo. Sin requests, el scheduler no puede ubicar
+      los pods de forma informada.
+spec:
+  validationActions: [Deny]
+  evaluation:
+    background:
+      enabled: true
+
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, kyverno, falco]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+
+  variables:
+    # Contenedores e initContainers.
+    # Los ephemeralContainers (kubectl debug) quedan fuera porque
+    # Kubernetes no les permite definir resources.
+    - name: containers
+      expression: >-
+        object.spec.containers + object.spec.?initContainers.orValue([])
+
+    # Nombres de los contenedores a los que les falta alguno de los cuatro valores.
+    - name: missing
+      expression: >-
+        variables.containers
+          .filter(c, !(
+            c.?resources.?requests.?cpu.hasValue() &&
+            c.?resources.?requests.?memory.hasValue() &&
+            c.?resources.?limits.?cpu.hasValue() &&
+            c.?resources.?limits.?memory.hasValue()))
+          .map(c, c.name)
+
+  validations:
+    - expression: size(variables.missing) == 0
+      messageExpression: >-
+        'Todo contenedor debe definir resources.requests y resources.limits de cpu y memory. No cumplen: ' +
+        variables.missing.join(', ')
