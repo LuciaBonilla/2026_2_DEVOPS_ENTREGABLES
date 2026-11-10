@@ -3,19 +3,16 @@
 ## Consigna
 
 - Utilizando la aplicacion que crearon para el Entregable 1. Se deberá implementar un sistema de monitoreo y alertas si se pasa determinada cantidad de X operaciones en un período de Y minutos. Ejemplo: si se pasa determinada cantidad de órdenes de un producto en un período de 5 minutos. 
-- La solución debe ser contenerizada y desplegada en un cluster de Kubernetes.
+- La solución debe ser contenerizada y desplegada en un clúster de Kubernetes.
 - Stack recomendado: Java, Springboot, Prometheus, Grafana
 
 # Documentación
 
 ## Funcionalidad de la Aplicación
 
-La API es la del [Entregable 1](../entregable1/README.md), en la versión v2.1.0. Las
-respuestas de `/health` y `/ci/{number}` son las mismas que en v2.0.0, con `api_version`
-igual a `2.1.0`. Cambios de esta versión:
+La API es la del [Entregable 1](../entregable1/README.md), en la versión v2.1.0. Las respuestas de `/health` y `/ci/{number}` son las mismas que en v2.0.0, con `api_version` igual a `2.1.0`. Cambios de esta versión:
 
-- Nuevo endpoint `GET /metrics`, con las métricas en el formato de Prometheus. No aparece
-  en `/docs`, porque se excluyó del esquema a propósito: es un endpoint de infraestructura.
+- Nuevo endpoint `GET /metrics`, con las métricas en el formato de Prometheus. No aparece en `/docs`, porque se excluyó del esquema a propósito: es un endpoint de infraestructura.
 - Un middleware mide todas las peticiones HTTP, salvo las de `/health` y `/metrics`.
 
 ## Stack Tecnológico
@@ -58,7 +55,7 @@ El sistema de monitoreo y alertas para la aplicación utiliza:
 
 Se utiliza:
 
-- Prometheus para recopilar las métricas de las aplicaciones y los pods, y generar las alertas ([definidas aquí](./k8s/monitoring/prometheus/configmap.yaml)).
+- Prometheus para consultar y guardar las métricas de los pods, y generar las [alertas que definimos en ConfigMap](./k8s/monitoring/prometheus/configmap.yaml).
 - Grafana se encarga de la visualización de los datos que brinda Prometheus.
 - La aplicación ([ci-validator-api v2.1.0](../ci-validator-api/v2.1.0/main.py)) expone un endpoint que responde con las métricas por defecto y las creadas por nosotros. La aplicación utiliza la librería [prometheus-client](https://pypi.org/project/prometheus-client/) para hacerlo.
 
@@ -89,7 +86,7 @@ En este caso, las métricas son:
     - Tipo: Histogram
     - Pregunta que responde: ¿Cuánto tarda en responder?	
     - Dominio: Latencia
-    - Buckets (límites superiores, en segundos): de `0.0005` a `0.25`, concentrados entre 0,5 y 3 ms.
+    - Buckets (límites superiores, en segundos): de `0.0005` a `0.25` (0,5ms - 1,0ms - 1,5ms - 2,0ms - 3,0ms - 5,0ms - 10ms - 25ms - 50ms - 100ms - 250ms).
 
 - `ci_validator_http_requests_in_progress{method,route}`
     - Tipo: Gauge (cantidad que puede subir, bajar o establecerse arbitrariamente).
@@ -106,6 +103,8 @@ En este caso, las métricas son:
 ## Comandos e Instrucciones para Probar el Sistema de Monitoreo y Alerta
 
 ### Comandos
+
+Los siguientes comandos fueron ejecutados en PowerShell (>v6.0):
 
 ```bash
 # Todos los comandos se ejecutan desde la raíz del repositorio.
@@ -155,15 +154,23 @@ minikube service grafana --url              # http://localhost:Z  (admin/admin)
 === CREAR Y VER DASHBOARDS EN GRAFANA ==
 # Crear el datasource y los dashboards en la interfaz web de Grafana, como se indica más abajo.
 
-=== TRÁFICO === -> Dispara la alerta: más de X = 40 validaciones en un período de Y = 2 minutos.
-1..100 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ci/1.234.567-2"; Start-Sleep -Milliseconds 500 }
+=== DISPARAR ALERTAS ===
+
+# Dispara la alerta: más de X = 40 validaciones en un período de Y = 2 minutos.
+1..200 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ci/1.234.567-2"; Start-Sleep -Milliseconds 50 }
 
 # Opcional: generar errores 404 para el panel de códigos HTTP.
-1..30 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ruta-inexistente"; Start-Sleep -Milliseconds 500 }
+1..30 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ruta-inexistente"; Start-Sleep -Milliseconds 50 }
 
-=== VER ALERTA ===
+# Reducir cantidad de pods a 0. Si se mantiene por 1 minuto: dispara la alerta que avisa que Prometheus no logra leer ningún pod de la app.
+kubectl scale deployment/ci-validator-api --replicas=0
+
+# Volver a la normalidad.
+kubectl scale deployment/ci-validator-api --replicas=3
+
+=== VER ALERTAS ===
 # Se ve en los dashboards, como se indica más abajo.
-# En Prometheus: http://localhost:Y/alerts (la regla pasa de inactive a firing; puede demorar hasta ~30 s).
+# En Prometheus: http://localhost:Y/alerts
 # En Grafana: panel "Estado de las alertas".
 
 === BORRAR TODO ===
@@ -173,12 +180,7 @@ minikube delete --all --purge
 
 ### Datasource de Prometheus
 
-El datasource se crea automáticamente al iniciar Grafana. Está definido en
-[datasource-configmap.yaml](./k8s/monitoring/grafana/datasource-configmap.yaml):
-UID fijo `prometheus`, URL `http://prometheus:9090` (nombre y puerto del Service de
-Prometheus) y Scrape interval de 15 s, el mismo `scrape_interval` del
-[ConfigMap de Prometheus](./k8s/monitoring/prometheus/configmap.yaml). Grafana usa
-ese valor para calcular `$__rate_interval`.
+El datasource se crea automáticamente al iniciar Grafana. Está definido en [datasource-configmap.yaml](./k8s/monitoring/grafana/datasource-configmap.yaml): UID fijo `prometheus`, URL `http://prometheus:9090` (nombre y puerto del Service de Prometheus) y Scrape interval de 15 s, el mismo `scrape_interval` del [ConfigMap de Prometheus](./k8s/monitoring/prometheus/configmap.yaml). Grafana usa ese valor para calcular `$__rate_interval`.
 
 Para verificarlo: Connections → Data sources → Prometheus → Save & test.
 
@@ -262,28 +264,95 @@ Estos son los paneles del dashboard que creamos:
 
 Test simple para comprobar que saltan las alertas y que el dashboard muestra los estados del sistema, ya sea el actual o pasados.
 
-Así se ve el dashboard sin enviar nada de tráfico a la aplicación en este instante:
+Así se ve sin enviar nada de tráfico a la aplicación en este instante:
+
+En Prometheus:
 
 ![alt text](./images/dashboard/image.png)
 
 ![alt text](./images/dashboard/image-1.png)
 
-Al ejecutar en la terminal:
-
-```bash
-1..200 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ci/1.234.567-2"; Start-Sleep -Milliseconds 100 }
-1..30 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ruta-inexistente"; Start-Sleep -Milliseconds 500 }
-```
-
-Luego de unos pocos segundos, el dashboard reflejó el estado del sistema ante estrés y mostró que se generó una alerta (Prometheus generó la alerta; Grafana la mostró):
+En Grafana:
 
 ![alt text](./images/dashboard/image-2.png)
 
 ![alt text](./images/dashboard/image-3.png)
 
+Al ejecutar en la terminal (cambiar la X por el puerto que se haya brindado anteriormente):
 
-Luego, al detenerse el tráfico, detectó que el sistema se estabilizó y que no había ninguna alerta disparada:
+```bash
+1..200 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ci/1.234.567-2"; Start-Sleep -Milliseconds 50 }
+1..30 | ForEach-Object { curl.exe -s -o NUL "http://localhost:X/ruta-inexistente"; Start-Sleep -Milliseconds 50 }
+```
+
+Luego de unos pocos segundos (15s), se reflejó el estado del sistema ante estrés y se mostró que se generó una alerta:
+
+En Prometheus:
 
 ![alt text](./images/dashboard/image-4.png)
 
+En Grafana:
+
 ![alt text](./images/dashboard/image-5.png)
+
+![alt text](./images/dashboard/image-6.png)
+
+Luego, al detenerse el tráfico, se detectó que el sistema se estabilizó y que no había ninguna alerta disparada:
+
+En Prometheus:
+
+![alt text](./images/dashboard/image-7.png)
+
+En Grafana:
+
+![alt text](./images/dashboard/image-8.png)
+
+![alt text](./images/dashboard/image-9.png)
+
+Al ejecutar en la terminal:
+
+```bash
+kubectl scale deployment/ci-validator-api --replicas=0
+```
+
+Luego de unos pocos segundos (15s), se reflejó el estado del sistema y se mostró que se generó una alerta (en estado pendiente porque no pasó 1min):
+
+En Prometheus:
+
+![alt text](./images/dashboard/image-10.png)
+
+En Grafana:
+
+![alt text](./images/dashboard/image-11.png)
+
+![alt text](./images/dashboard/image-12.png)
+
+Luego de 1min se disparó la alerta:
+
+En Prometheus:
+
+![alt text](./images/dashboard/image-13.png)
+
+En Grafana:
+
+![alt text](./images/dashboard/image-14.png)
+
+Al ejecutar en la terminal:
+
+```bash
+kubectl scale deployment/ci-validator-api --replicas=3
+```
+
+Luego de unos pocos segundos (15s), se reflejó el estado del sistema y se mostró que no se disparó la alerta, ya que el sistema regresó a la normalidad:
+
+En Prometheus:
+
+![alt text](./images/dashboard/image-15.png)
+
+![alt text](./images/dashboard/image-16.png)
+
+En Grafana:
+
+![alt text](./images/dashboard/image-17.png)
+
+> **_Nota_** Véase que se crearon nuevos pods porque los viejos se eliminaron.

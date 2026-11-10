@@ -20,6 +20,13 @@ spec:
         - "--config.file=/etc/prometheus/prometheus.yaml"
         ports:
         - containerPort: 9090 # Puerto en la IP del pod (PrometheusServerPodIP); 9090 es el puerto por defecto de Prometheus Server.
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi     # La memoria de Prometheus crece con la cantidad de series y el tiempo que las retiene.
         volumeMounts:
         - name: config
           mountPath: /etc/prometheus

@@ -17,6 +17,13 @@ spec:
         image: grafana/grafana:13.0
         ports:
         - containerPort: 3000 # Puerto en la IP del pod (GrafanaPodIP); 3000 es el puerto por defecto de Grafana.
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi     # El arranque es el pico de memoria.
         volumeMounts:
         - name: datasources
           mountPath: /etc/grafana/provisioning/datasources
