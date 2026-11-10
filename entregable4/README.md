@@ -245,7 +245,7 @@ Falco ([evento completo](../entregable3/reports/final/falco-event.txt)), regla *
 | Los `localhost:<puerto>` dejaban de responder | `kubectl port-forward` se corta cuando el pod se reinicia (por ejemplo, después de un deploy) | Bucle de reintento por servicio en `start-components.sh` |
 | Prometheus y Grafana no tomaban los cambios de configuración | Los ConfigMaps montados no se recargan solos | `deploy.sh` hace `rollout restart` de ambos |
 
-### Entregables anteriores y clúster de la UCU
+### Entregables anteriores
 
 | Entregable | Problema | Causa | Solución |
 |---|---|---|---|
@@ -254,8 +254,6 @@ Falco ([evento completo](../entregable3/reports/final/falco-event.txt)), regla *
 | 3 | Kyverno no se instalaba en minikube | Resolución de nombres (DNS) de Docker Desktop | Agregar `"dns": ["1.1.1.1", "8.8.8.8"]` en la configuración de Docker Engine |
 | 3 | Pods en `CreateContainerConfigError` con `runAsNonRoot: true` | La imagen declara el usuario por nombre (`appuser`) y el kubelet no puede comprobar que no sea root | UID y GID numéricos (100 y 101) en el Deployment |
 | 3 | Las políticas de Kyverno rechazarían el DaemonSet de Falco | Falco necesita correr con privilegios | Excluir los namespaces `kube-system`, `kyverno` y `falco` de las políticas |
-| UCU | El clúster no ve las imágenes del Docker local | Las imágenes no están en ningún registry, y no se quisieron publicar en uno público | Registry propio dentro del namespace; las imágenes se suben por `kubectl port-forward` |
-| UCU | No alcanzó el tiempo para llevar los entregables 2 a 4 al clúster compartido | El usuario del grupo no puede crear Roles (RBAC), que Prometheus necesita; Kyverno y Falco se instalan a nivel de todo el clúster | Solo se despliega el entregable 1 |
 
 ## g. Conclusiones y oportunidades de mejora
 
@@ -279,7 +277,6 @@ Falco ([evento completo](../entregable3/reports/final/falco-event.txt)), regla *
 - Jenkins corre como root con el socket de Docker del host, y Jenkins y Grafana usan `admin` / `admin`.
 - Prometheus y Grafana no guardan datos entre reinicios, y las alertas no notifican a nadie.
 - Algunas versiones no están fijadas: la imagen de Jenkins (`lts-jdk17`), kubectl (`stable`) y, en el entregable 3, Kyverno, Helm y Falco.
-- En el clúster de la UCU solo se despliega el entregable 1.
 
 ### Oportunidades de mejora
 
