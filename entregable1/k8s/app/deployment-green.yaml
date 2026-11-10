@@ -21,3 +21,10 @@ spec:
         image: ci-validator-api:2.0.0
         ports:
         - containerPort: 8000 # Puerto en la IP del pod (PodIP); 8000 es el puerto de Uvicorn (servidor web ASGI para Python).
+        resources:
+          requests:           # Lo que el scheduler reserva en el nodo para ubicar el pod.
+            cpu: 50m          # 5 % de un núcleo.
+            memory: 64Mi
+          limits:             # El máximo que puede consumir el contenedor.
+            cpu: 500m         # Si lo supera, el kernel lo frena (throttling); no se reinicia.
+            memory: 128Mi     # Si lo supera, el kernel mata el proceso (OOMKilled) y el kubelet lo reinicia.

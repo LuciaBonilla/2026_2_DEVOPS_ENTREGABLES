@@ -16,11 +16,11 @@
 
 ## Evaluación
 
-- Funcionalidad – 30%
-- Calidad técnica – 25%
+- Funcionalidad - 30%
+- Calidad técnica - 25%
 - Uso correcto de k8s – 20%
-- Documentación y reproducibilidad – 15%
-- Trabajo en equipo – 10%
+- Documentación y reproducibilidad - 15%
+- Trabajo en equipo - 10%
 
 # Documentación
 
@@ -53,11 +53,11 @@ El servicio no tiene estado: no utiliza volúmenes, ni base de datos, ni estado 
     ```json
     {
         "input": string,                    
-        "normalized_ci": string,            # Forma canónica de la cédula (xxxxxxxx).
-        "valid": bool,                      # Indica si la cédula es válida.
-        "expected_check_digit": integer,    # Dígito verificador esperado dada la base.
-        "message": string,                  # Mensaje.
-        "api_version": string               # Versión de la API.
+        "normalized_ci": string|null,           # Forma canónica de la cédula (xxxxxxxx).
+        "valid": bool,                          # Indica si la cédula es válida.
+        "expected_check_digit": integer|null,   # Dígito verificador esperado dada la base.
+        "message": string,                      # Mensaje.
+        "api_version": string                   # Versión de la API.
     }
     ```
 
@@ -69,12 +69,12 @@ Body Response:
 ```json
 {
     "input": string,
-    "normalized_ci": string|null,           # Forma canónica de la cédula (xxxxxxxx).
-    "formatted_ci": string,                 # NUEVO v2.0.0. Forma de presentación de cédula (xxx.xxx-x o x.xxx.xxx-x).
-    "valid": bool,                          # Indica si la cédula es válida.
-    "expected_check_digit": integer|null,   # Dígito verificador esperado dada la base.
-    "message": string,                      # Mensaje.
-    "api_version": string                   # Versión de la API.
+    "normalized_ci": string|null,               # Forma canónica de la cédula (xxxxxxxx).
+    "formatted_ci": string|null,                # NUEVO v2.0.0. Forma de presentación de cédula (xxx.xxx-x o x.xxx.xxx-x).
+    "valid": bool,                              # Indica si la cédula es válida.
+    "expected_check_digit": integer|null,       # Dígito verificador esperado dada la base.
+    "message": string,                          # Mensaje.
+    "api_version": string                       # Versión de la API.
 }
 ```
 
@@ -114,7 +114,7 @@ La aplicación es desplegada con:
 
 ## Estrategia de Deployment Blue/Green
 
-La [estrategia de despliegue blue/green](https://www.ibm.com/think/topics/blue-green-deployment) es un método para desplegar software nuevo que usa dos entornos de producción idénticos (blue y green) para evitar interrupciones en el servicio y permitir rollbacks rápidos.
+La [estrategia de despliegue blue/green](https://www.ibm.com/think/topics/blue-green-deployment) es un método para desplegar software nuevo que usa dos entornos de producción (blue y green) para evitar interrupciones en el servicio y permitir rollbacks rápidos.
 
 ### ¿Cómo funciona?
 
@@ -241,3 +241,7 @@ curl.exe -X GET http://localhost:X/ci/123
 minikube stop
 minikube delete --all --purge
 ```
+
+> **_Nota_** No se utiliza kubectl port-forward svc/... porque no pasa por el Service: lo usa solo para elegir un pod al arrancar. Por eso, cuando se hace patch del selector, el port-forward abierto sigue mandando el tráfico al pod viejo.
+
+> **_Nota_** minikube service ci-validator-api --url entra por el NodePort, y el NodePort sí pasa por las reglas de kube-proxy. Cada request nuevo respeta el selector actual.
