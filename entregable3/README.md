@@ -19,7 +19,7 @@ Requisitos de seguridad y herramientas DevSecOps
     - Analizar los manifiestos con KubeLinter y guardar el resultado en /reports/kubelinter.txt. 
 
 - Seguridad en tiempo de ejecución 
-    - Instalar Falco en el cluster (o usar una instalación existente). 
+    - Instalar Falco en el clúster (o usar una instalación existente). 
     - Ejecutar dentro de un pod una acción sospechosa (por ejemplo, abrir una shell interactiva). 
     - Verificar que Falco registre el evento y guardar el log o la alerta en /reports/falco-event.log 
 
@@ -34,7 +34,10 @@ Requisitos de seguridad y herramientas DevSecOps
 | Semgrep | 1.184.0 | Análisis estático del código y del Dockerfile |
 | pip-audit | 2.10.1 | Vulnerabilidades conocidas en las dependencias Python |
 
-### Por qué pip-audit en lugar de npm audit
+- [Semgrep](https://semgrep.dev/) es una herramienta de análisis estático de código (SAST, por sus siglas en inglés) ligera y de código abierto que permite examinar el código fuente en busca de errores, vulnerabilidades de seguridad y problemas de calidad.
+- [pip-audit](https://pypi.org/project/pip-audit/) es una herramienta de software desarrollada por Trail of Bits con el apoyo de Google y mantenida por la Python Packaging Authority (PyPA). Su función principal es escanear entornos y dependencias de Python en busca de vulnerabilidades de seguridad conocidas
+
+### ¿Por qué pip-audit en lugar de npm-audit?
 
 `npm audit` analiza dependencias del ecosistema npm a partir de un `package-lock.json`. La aplicación está escrita en Python y no tiene dependencias de Node, así que `npm audit` no tiene nada que analizar. La herramienta equivalente para Python es `pip-audit`, de la Python Packaging Authority (PyPA), que compara cada dependencia con las vulnerabilidades publicadas.
 
@@ -49,7 +52,7 @@ Se audita la lista de paquetes instalados en la imagen (`pip freeze --all`) y no
 | [pip-audit, línea base](./reports/baseline/pip-audit.txt) | v2.1.0 |
 | [pip-audit, final](./reports/final/pip-audit.txt) | v2.1.1 |
 
-### Hallazgos y decisiones
+### Hallazgos y Decisiones
 
 - Línea base (v2.1.0)
     - Semgrep
@@ -66,9 +69,9 @@ Se audita la lista de paquetes instalados en la imagen (`pip freeze --all`) y no
 
 En resumen, se hallaron vulnerabilidades con las herramientas en la v2.1.0 de la app, se corrigieron en la v2.1.1 y se verificaron que se solucionaron con las herramientas.
 
-### Comandos para obtener los reportes
+### Comandos para Obtener los Reportes
 
-Los siguientes comandos fueron ejecutados en PowerShell (>v6.0):
+Ejecutados en PowerShell (>v6.0), desde la raíz del repositorio:
 
 ```bash
 === 0. Preparación: fijar las versiones de las herramientas ===
@@ -90,7 +93,7 @@ docker run --rm -v "${PWD}:/src" -w /src $SEMGREP sh -c "semgrep scan --verbose 
 
 # 1.2. pip-audit
 
-# 1. Construir la imagen v2.1.0 (si no la tienes).
+# 1. Construir la imagen v2.1.0 (si no se tiene).
 docker build -t ci-validator-api:2.1.0 ./ci-validator-api/v2.1.0
 
 # 2. Listar los paquetes Python instalados en la imagen. --all incluye pip, que también viene en la imagen.
@@ -105,7 +108,7 @@ docker run --rm -v "${PWD}:/repo" -w /repo $PY sh -c "pip install --no-cache-dir
 # --desc: agrega la descripción de cada vulnerabilidad.
 # -o: escribe el informe directamente en el archivo.
 
-=== 2. Analizar y decidir ===
+=== 2. Analizar y decidir en base a los resultados ===
 
 === 3. Crear v2.1.1 con las correcciones ===
 
@@ -117,7 +120,7 @@ docker build -t ci-validator-api:2.1.1 ./ci-validator-api/v2.1.1
 # No debe mostrar uid=0(root).
 docker run --rm ci-validator-api:2.1.1 id
 
-# La app sigue funcionando.
+# La app sigue funcionando a pesar de las correcciones.
 docker run --rm -d -p 8000:8000 --name ci-validator-test ci-validator-api:2.1.1
 curl.exe -s http://127.0.0.1:8000/health
 docker stop ci-validator-test
@@ -139,23 +142,28 @@ docker run --rm -v "${PWD}:/repo" -w /repo $PY sh -c "pip install --no-cache-dir
 |---|---|---|
 | Trivy | 0.76.2 | Vulnerabilidades de los paquetes del sistema y de Python en la imagen |
 
-### Caché de la base de datos
+- Trivy es un escáner de seguridad de código abierto desarrollado y mantenido por Aqua Security, diseñado para entornos nativos de la nube y DevOps.
+    Trivy se utiliza para analizar diferentes elementos en busca de problemas de seguridad mediante un solo comando de terminal:
+    - Vulnerabilidades de software: Detecta fallos conocidos (CVE) en paquetes de sistemas operativos (Alpine, Ubuntu, Debian, Red Hat, etc.) y dependencias de lenguajes de programación (npm, Pip, Go, Cargo, etc.).
+    - Errores de configuración (IaC): Analiza archivos de infraestructura como código (Terraform, Kubernetes, Dockerfiles) para detectar malas prácticas de seguridad.
+    - Secretos y credenciales expuestas: Encuentra contraseñas, tokens y claves privadas filtradas en el código, variables de entorno o repositorios.
+    - Licencias de software: Identifica las licencias de los componentes utilizados en el proyecto.
 
-Trivy descarga una base de datos de vulnerabilidades. Si se guarda en un volumen de Docker, no la descarga en cada ejecución. Además, la línea base y el escaneo final pueden usar exactamente la misma base, y así la comparación es justa. Basta con agregar -v trivy-cache:/root/.cache a cada comando; Docker crea el volumen la primera vez.
+### Caché de la Base de Datos
+
+Trivy descarga una base de datos de vulnerabilidades. Si se guarda en un volumen de Docker, no la descarga en cada ejecución. Además, la línea base y el escaneo final pueden usar exactamente la misma base, y así la comparación es justa. Basta con agregar `-v trivy-cache:/root/.cache` a cada comando; Docker crea el volumen la primera vez.
 
 Base de datos de vulnerabilidades actualizada el 2026-11-08 (`trivy version`). Los dos escaneos usaron la misma base de datos (`--skip-db-update` en el escaneo final).
 
-### Carpeta para las imágenes exportadas
+### Carpeta para las Imágenes Exportadas
 
-Se va a exportar cada imagen a un archivo .tar de unos 150 a 200 MB. Ponerlos en una carpeta que git ignore y nunca subirlos al repositorio.
+Se va a exportar cada imagen a un archivo .tar de unos 150 a 200 MB. Ponerlos en una carpeta que git ignore y nunca subirlos al repositorio. Esto porque Trivy no tiene acceso al daemon de Docker: escanea la imagen exportada con `docker save`.
 
-Trivy no tiene acceso al daemon de Docker: escanea la imagen exportada con `docker save`.
+### Tipos de Análisis Utilizados
 
-### Tipos de análisis utilizados
-
-- vuln (Vulnerabilidades - CVE): Es el motor principal. Busca fallos de seguridad conocidos públicamente en los paquetes instalados del sistema operativo (como Alpine o Debian) y en las dependencias de los lenguajes de programación (como las librerías listadas en un package.json, requirements.txt o go.mod).
-- secret (Secretos y Credenciales): Inspecciona el contenido de los archivos en busca de información confidencial expuesta por error. Rastrea patrones de claves API, tokens de servicios (AWS, GitHub, GitLab), contraseñas en texto plano, certificados SSH y cadenas de conexión a bases de datos.
-- misconfig (Malas Configuraciones): Evalúa archivos de Infraestructura como Código (IaC) para verificar que sigan las mejores prácticas de seguridad. Analiza tus Dockerfile, manifiestos de Kubernetes, planos de Terraform o Helm Charts buscando configuraciones riesgosas (por ejemplo, correr un contenedor con privilegios innecesarios o dejar puertos críticos expuestos al público).
+- **vuln (Vulnerabilidades - CVE):** Es el motor principal. Busca fallos de seguridad conocidos públicamente en los paquetes instalados del sistema operativo (como Debian) y en las dependencias de los lenguajes de programación (como las librerías listadas en un requirements.txt).
+- **secret (Secretos y Credenciales):** Inspecciona el contenido de los archivos en busca de información confidencial expuesta por error. Rastrea patrones de claves API, tokens de servicios (AWS, GitHub, GitLab), contraseñas en texto plano, certificados SSH y cadenas de conexión a bases de datos.
+- **misconfig (Malas Configuraciones):** Evalúa archivos de Infraestructura como Código (IaC) para verificar que sigan las mejores prácticas de seguridad. Analiza los Dockerfile, manifiestos de Kubernetes, planos de Terraform o Helm Charts buscando configuraciones riesgosas (por ejemplo, correr un contenedor con privilegios innecesarios o dejar puertos críticos expuestos al público).
 
 ### Resultados
 
@@ -168,43 +176,64 @@ Trivy no tiene acceso al daemon de Docker: escanea la imagen exportada con `dock
 
 El informe tiene dos secciones:
 
-- Paquetes del sistema operativo: los paquetes de Debian que trae la imagen base python:3.12-slim.
-- Paquetes Python: lo instalado en site-packages. Es normal que aquí aparezcan las mismas vulnerabilidades de pip 25.0.1 que encontró pip-audit.
+- **Paquetes del sistema operativo:** los paquetes de Debian que trae la imagen base python:3.12-slim.
+- **Paquetes Python:** lo instalado en site-packages (ubicación estándar donde Python almacena las bibliotecas y paquetes de terceros que instalas (por ejemplo, a través de herramientas como pip)). Es normal que aquí aparezcan las mismas vulnerabilidades de pip v25.0.1 que encontró pip-audit antes.
 
 Para decidir qué hacer con cada fila, la columna clave es Status:
 
-- fixed: existe una versión corregida (columna “Fixed Version”), así que se resuelve actualizando.
-- affected: todavía no hay corrección publicada.
-- will_not_fix / fix_deferred: Debian decidió no corregirla o postergarla.
+- `fixed`: existe una versión corregida (columna “Fixed Version”), así que se resuelve actualizando.
+- `affected`: todavía no hay corrección publicada.
+- `will_not_fix` / `fix_deferred`: Debian decidió no corregirla o postergarla.
 
-Con affected, will_not_fix o fix_deferred, actualizar no la resuelve: hay que documentarla.
+Con `affected`, `will_not_fix` o `fix_deferred`, actualizar no resuelve la vulnerabilidad: hay que documentarla.
 
 ### Vulnerabilidades CRITICAL y HIGH
 
-- Baseline (v2.1.0)
-    - Debian 13.7: 189 vulnerabilidades (UNKNOWN: 0, LOW: 65, MEDIUM: 75, HIGH: 49, CRITICAL: 0)
-        - Todas las librerías del sistema operativo tienen vulnerabilidades con Status affected (todavía no hay corrección publicada), a excepción de una librería zlib1g.
-        - zlib1g tiene 3 vulnerabilidades para las que se tiene corrección publicada:
-            - HIGH: CVE-2026-76844 y CVE-2026-85091 son vulnerabilidades de desbordamiento de búfer en la región heap (Heap Buffer Overflow).
-            - MEDIUM: CVE-2026-27171 es una vulnerabilidad de denegación de servicio (DoS).
-            - La solución a estas vulnerabilidades es actualizar a la versión 1:1.3.dfsg+really1.3.1-1+deb13u1
-    - Python (python-pkg): 6 vulnerabilidades (UNKNOWN: 0, LOW: 1, MEDIUM: 5, HIGH: 0, CRITICAL: 0)
-        - Las vulnerabilidades son las mismas que las detectadas con pip-audit, se solucionan igual.
+#### Línea base (v2.1.0)
 
-Luego, en v2.1.1 se aplicó:
-- En Dockerfile, actualiza la librería zlib1g de Debian a la versión fixeada. Agregar después de la línea FROM: RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 && rm -rf /var/lib/apt/lists/*
-- pip actualizado a 26.2.0.
+- **Paquetes del sistema operativo (Debian 13.7):** 189 vulnerabilidades (UNKNOWN: 0, LOW: 65, MEDIUM: 75, HIGH: 49, CRITICAL: 0).
+    - Casi todas tienen Status `affected` (todavía no hay corrección publicada), `will_not_fix` (Debian decidió no corregirlas) o `fix_deferred` (Debian postergó la corrección). En esos casos actualizar no sirve: no existe una versión corregida a la cual actualizar.
+    - La única excepción es la librería de compresión `zlib1g`, con 3 vulnerabilidades en Status `fixed`, es decir, con versión corregida publicada:
+        - HIGH: CVE-2026-76844 y CVE-2026-85091, desbordamientos de búfer en el heap (heap buffer overflow). Un dato comprimido manipulado puede escribir fuera de la memoria reservada.
+        - MEDIUM: CVE-2026-27171, denegación de servicio (DoS).
+        - Se corrigen actualizando `zlib1g` a la versión `1:1.3.dfsg+really1.3.1-1+deb13u1`.
+- **Paquetes Python (python-pkg):** 6 vulnerabilidades (UNKNOWN: 0, LOW: 1, MEDIUM: 5, HIGH: 0, CRITICAL: 0).
+    - Son las mismas que detectó pip-audit: todas están en pip v25.0.1, el que trae la imagen base. Las dependencias de la app no tienen vulnerabilidades.
 
-- Final (v2.1.1)
-    - Debian 13.7: 186 vulnerabilidades (UNKNOWN: 0, LOW: 65, MEDIUM: 74, HIGH: 47, CRITICAL: 0)
-        - Se fixearon las vulnerabilidades con Status fixed del reporte anterior.
-    - Python (python-pkg): 9 vulnerabilidades (UNKNOWN: 0, LOW: 1, MEDIUM: 2, HIGH: 5, CRITICAL: 1).
-        - Se introdujeron nuevas vulnerabilidades a otras librerías Python (no a pip) y de mayor gravedad al actualizar pip.
-        - Pero son librerías internas de pip; pip solo se usa durante el build; la app no las importa.
-        - El riesgo que queda: durante el build, pip descarga paquetes usando la librería certifi.
-        - No se pueden actualizar por separado, porque no están instaladas como paquetes propios.
+#### Correcciones aplicadas en v2.1.1
 
-### Comandos para obtener los reportes
+- En el Dockerfile, inmediatamente después de `FROM`, se actualiza `zlib1g` a la versión corregida:
+  `RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 && rm -rf /var/lib/apt/lists/*`
+- pip se actualiza a la versión 26.2.0.
+
+#### Final (v2.1.1)
+
+- **Paquetes del sistema operativo (Debian 13.7):** 186 vulnerabilidades (UNKNOWN: 0, LOW: 65, MEDIUM: 74, HIGH: 47, CRITICAL: 0).
+    - Bajaron de 189 a 186 porque se corrigieron las 3 de `zlib1g`: HIGH pasó de 49 a 47 y MEDIUM de 75 a 74.
+    - Las 186 restantes no tienen versión corregida publicada y quedan documentadas.
+- **Paquetes Python (python-pkg):** 9 vulnerabilidades (UNKNOWN: 0, LOW: 1, MEDIUM: 2, HIGH: 5, CRITICAL: 1).
+    - Las 6 de la línea base desaparecieron al actualizar pip.
+    - Las 9 nuevas no están en pip en sí ni en las dependencias de la app. Están en librerías que pip trae copiadas dentro de su propia carpeta (`pip/_vendor`), como `certifi`. Esta práctica se llama *vendoring*: pip incluye sus dependencias para seguir funcionando aunque el entorno de Python esté dañado.
+    - No se pueden actualizar por separado, porque no están instaladas como paquetes independientes sino como parte de pip. Solo se corrigen con una versión de pip que traiga copias más nuevas.
+    - Impacto en la app: ninguna de estas librerías se importa en tiempo de ejecución. La app usa sus propias dependencias (FastAPI, Uvicorn y prometheus-client).
+    - Riesgo residual:
+        - **Durante el build:** pip descarga los paquetes de PyPI usando estas librerías. Por ejemplo, `certifi` aporta los certificados con los que se verifica la conexión TLS. Una vulnerabilidad ahí podría afectar la integridad de lo que se descarga.
+        - **En la imagen final:** pip sigue instalado, aunque la app no lo use. Alguien que obtuviera una shell en el contenedor podría usarlo. El endurecimiento del Deployment reduce ese riesgo: usuario no-root, sistema de archivos de solo lectura y sin capabilities.
+    - Mejora posible: quitar pip de la imagen final, desinstalándolo después de instalar las dependencias. Así estas vulnerabilidades dejan de existir en la imagen en lugar de quedar documentadas.
+
+#### Resumen
+
+| Categoría | Línea base (v2.1.0) | Final (v2.1.1) | ¿Qué cambió? |
+|---|---|---|---|
+| Debian: total | 189 | 186 | Se corrigió `zlib1g` |
+| Debian: HIGH | 49 | 47 | Las 2 HIGH de `zlib1g` |
+| Debian: CRITICAL | 0 | 0 | — |
+| Python: total | 6 | 9 | Se corrigió pip; aparecieron las de sus librerías internas |
+| Python: HIGH + CRITICAL | 0 | 6 | Librerías incluidas en pip 26.2.0, no usadas por la app |
+
+### Comandos para Obtener los Reportes
+
+Ejecutados en PowerShell (>v6.0), desde la raíz del repositorio:
 
 ```bash
 === 0. Preparación ===
@@ -217,12 +246,13 @@ docker pull $TRIVY
 
 # Crear el directorio ./entregable3/build
 
-=== 1. Línea base sobre v2.1.0
+=== 1. Línea base sobre v2.1.0 ===
 
 docker save -o entregable3/build/ci-validator-api-2.1.0.tar ci-validator-api:2.1.0
 
 # Trivy escanea un archivo exportado de la imagen, en lugar de conectarse a Docker.
 docker run --rm -v trivy-cache:/root/.cache -v "${PWD}:/repo" -w /repo $TRIVY image --input entregable3/build/ci-validator-api-2.1.0.tar --scanners vuln,secret,misconfig --format table --output entregable3/reports/baseline/trivyreport.txt
+# Además, descarga la base de datos de vulnerabilidades.
 
 # Versión de Trivy y fecha de la base de datos, para el README.
 docker run --rm -v trivy-cache:/root/.cache $TRIVY version
@@ -242,43 +272,62 @@ docker run --rm -v trivy-cache:/root/.cache -v "${PWD}:/repo" -w /repo $TRIVY im
 
 ## Seguridad en Kubernetes
 
-KubeLinter es una herramienta de análisis estático (un linter) que identifica errores de configuración y vulnerabilidades antes de que los recursos se desplieguen en el clúster.
+### Herramientas
 
-Kyverno es un motor de políticas dinámico diseñado específicamente para Kubernetes que valida, muta y genera recursos directamente dentro del clúster.
+| Herramienta | Versión | Uso |
+|---|---|---|
+| KubeLinter | v0.8.3 | Análisis estático de los manifiestos antes de desplegarlos |
+| Kyverno | la última (porque fijar la versión dio errores) | Controlador de admisión: rechaza en el clúster los recursos que violan las políticas |
+| Helm | la última (porque fijar la versión dio errores) | Instalación de Kyverno en el clúster |
 
-Helm es un gestor de paquetes para Kubernetes. Funciona de manera similar a gestores de paquetes como apt o yum en Linux, o pip en Python: en lugar de instalar librerías, Helm instala y administra aplicaciones completas dentro de un clúster de Kubernetes.
+- [KubeLinter](https://docs.kubelinter.io/#/) es una herramienta de análisis estático (un linter) que identifica errores de configuración y vulnerabilidades antes de que los recursos se desplieguen en el clúster. 
+- [Kyverno](https://kyverno.io/) es un motor de políticas dinámico diseñado específicamente para Kubernetes que valida, muta y genera recursos directamente dentro del clúster. Cada vez que alguien crea o modifica un recurso, el API server se lo consulta a Kyverno y, si viola una política en modo `Deny`, rechaza el pedido. Actúa en el momento del despliegue. Las políticas de este entregable usan el tipo `ValidatingPolicy` (`policies.kyverno.io/v1`), basado en expresiones CEL (al igual que los manifiestos k8s); el tipo anterior, `ClusterPolicy`, está deprecado.
+- [Helm](https://helm.sh/es/) es un gestor de paquetes para Kubernetes. Funciona de manera similar a gestores de paquetes como apt o yum en Linux, o pip en Python: en lugar de instalar librerías, Helm instala y administra aplicaciones completas dentro de un clúster de Kubernetes.
 
-https://kyverno.io/docs/installation/installation/
-
-Importante, para instalar kyverno en minikube hay que: ir a Docker Desktop Abre Settings → Docker Engine y agrega "dns": ["1.1.1.1", "8.8.8.8"] al JSON.
+> **__Nota__** Importante, para instalar kyverno en minikube hay que: ir a Docker Desktop, abrir Settings → Docker Engine, agregar "dns": ["1.1.1.1", "8.8.8.8"] al JSON (Daemon configuration file) y aplicar.
 
 ### Hallazgos con Kubelinter
 
-| Hallazgo en la línea base - [app deployment.yaml del entregable 2](../entregable2/k8s/app/deployment.yaml) | Corrección en deployment.yaml - [app deployment.yaml del entregable 3](./k8s/app/deployment.yaml) |
+La línea base es el Deployment de la app del entregable 2 (v2.1.0).
+
+| Hallazgo en la línea base ([deployment.yaml del entregable 2](../entregable2/k8s/app/deployment.yaml)) | Corrección ([deployment.yaml del entregable 3](./k8s/app/deployment.yaml)) |
 | --- | --- |
-| run-as-non-root | runAsNonRoot: true + runAsUser/runAsGroup numéricos |
-| unset-cpu-requirements, unset-cpu-limit | CPU: request 50m, limit 500m |
-| unset-memory-request, unset-memory-requirements | Memoria: request 64Mi, limit 128Mi |
-| no-read-only-root-fs | readOnlyRootFilesystem: true |
-| no-anti-affinity | podAntiAffinity de tipo preferred por nodo |
+| run-as-non-root | `runAsNonRoot: true`, con `runAsUser: 100` y `runAsGroup: 101` numéricos |
+| no-read-only-root-fs | `readOnlyRootFilesystem: true` |
+| no-anti-affinity | `podAntiAffinity` de tipo `preferred` por nodo |
 
-Los valores de los recursos salen de los paneles de Grafana del entregable 2.
+- **UID numérico:** la imagen declara `USER appuser`, un nombre. Con un nombre, el kubelet no puede comprobar que el usuario no sea root y el pod falla con `CreateContainerConfigError`. Por eso se declaran los números reales, obtenidos con `docker run --rm ci-validator-api:2.1.1 id`.
+- **Anti-afinidad:** no tiene efecto en minikube, que tiene un solo nodo. En un clúster de varios nodos evita que la caída de un nodo se lleve todas las réplicas. Al ser `preferred`, nunca impide ubicar un pod.
 
-La anti-afinidad preferred no tiene efecto en minikube, que tiene un solo nodo, pero tampoco cuesta nada y es correcta en un clúster real.
+### Endurecimiento Adicional (no lo pidió KubeLinter)
 
-### Manifiestos no conformes rechazados por las políticas Kyverno
+| Control | ¿Qué evita? |
+| --- | --- |
+| `allowPrivilegeEscalation: false` | Que un proceso no-root se convierta en root ejecutando un binario setuid (activa `no_new_privs` en el kernel) |
+| `capabilities.drop: ["ALL"]` | Que el proceso conserve privilegios del kernel que no necesita |
+| `seccompProfile: RuntimeDefault` | Llamadas al sistema peligrosas, filtradas por el perfil por defecto del runtime |
+| `automountServiceAccountToken: false` | Que alguien con una shell en el pod obtenga credenciales para hablar con la API de Kubernetes |
+| `readinessProbe` y `livenessProbe` sobre `/health` | Que un pod que no responde reciba tráfico o siga corriendo sin reiniciarse |
+
+### Manifiestos No Conformes Rechazados por las Políticas de Kyverno
+
+Las tres políticas están en modo `Deny`: Kyverno rechaza el recurso en la admisión. Excluyen los namespaces `kube-system`, `kyverno` y `falco`, cuyos componentes necesitan privilegios que violarían las políticas.
 
 | Manifiesto | Lo rechaza |
 | --- | --- |
 | 01-latest-tag (Deployment) | disallow-latest-tag |
-| 02-no-tag (Pod, sin etiqueta = latest implícito) | disallow-latest-tag |
-| 03-no-limits (Deployment, requests sin limits) | require-requests-limits |
-| 04-root (Deployment, imagen v2.1.0 sin USER) | disallow-root-containers |
-| 05-run-as-user-0 (Pod, UID 0 explícito) | disallow-root-containers |
-| entregable2/k8s/app/deployment.yaml | require-requests-limits y disallow-root-containers |
+| 02-no-tag (Pod sin etiqueta: equivale a latest) | disallow-latest-tag |
+| 03-no-limits (Deployment con requests y sin limits) | require-requests-limits |
+| 04-root (Deployment con la imagen v2.1.0, que no tiene USER) | disallow-root-containers |
+| 05-run-as-user-0 (Pod con UID 0 explícito) | disallow-root-containers |
+| entregable2/k8s/app/deployment.yaml | disallow-root-containers |
 | kubectl run --image=nginx | las tres |
 
-### Comandos para obtene
+Como las políticas se escriben sobre Pods, Kyverno genera automáticamente reglas equivalentes para Deployments y otros controladores (autogen). Por eso se rechaza el Deployment completo, en lugar de aceptarlo y que fallen después los pods que crea.
+
+### Comandos para Obtener los Reportes
+
+Ejecutados en PowerShell (>v6.0), desde la raíz del repositorio:
 
 ```bash
 === 0. Preparación ===
@@ -290,19 +339,18 @@ docker build -t ci-validator-api:2.1.1 ./ci-validator-api/v2.1.1
 docker run --rm ci-validator-api:2.1.1 id
 # Esperado: uid=100(appuser) gid=101(appgroup) groups=101(appgroup)
 
-=== 1. KubeLinter: línea base ===
+===  1. KubeLinter: línea base (manifiestos del entregable 2) ===
 
-# Igual que con Trivy y Semgrep, la línea base son los manifiestos de la app del entregable 2 (v2.1.0):
 docker pull $KUBELINTER
 docker run --rm -v "${PWD}:/repo" -w /repo $KUBELINTER lint --config entregable3/.kube-linter.yaml --format plain --output entregable3/reports/baseline/kubelinter.txt entregable2/k8s/app
 
-=== 2. KubeLinter: final ===
+=== 2. KubeLinter: final (manifiestos del entregable 3) ===
 
 docker run --rm -v "${PWD}:/repo" -w /repo $KUBELINTER lint --config entregable3/.kube-linter.yaml --format plain --output entregable3/reports/final/kubelinter.txt entregable3/k8s/app
 
-=== 3. minikube limpio con la versión fijada
+=== 3. minikube limpio ===
 
-# Primero en Docker Desktop, Abre Settings → Docker Engine y agrega "dns": ["1.1.1.1", "8.8.8.8"] al JSON.
+# Importante, para instalar kyverno en minikube hay que: ir a Docker Desktop, abrir Settings → Docker Engine, agregar "dns": ["1.1.1.1", "8.8.8.8"] al JSON (Daemon configuration file) y aplicar.
 
 minikube version
 minikube delete --all --purge
@@ -317,8 +365,9 @@ helm repo add kyverno https://kyverno.github.io/kyverno/
 helm repo update
 helm install kyverno --namespace kyverno kyverno/kyverno --create-namespace
 kubectl get pods -n kyverno
+# Esperar a que los pods estén creados.
 
-=== 5. Aplicar las políticas
+=== 5. Aplicar las políticas ===
 
 kubectl apply -f entregable3/k8s/policies/
 kubectl get vpol                                # las 3 deben mostrar READY = true
@@ -364,24 +413,37 @@ kubectl exec $POD -- ls /var/run/secrets/kubernetes.io/serviceaccount # No such 
 
 ## Seguridad en Tiempo de Ejecución
 
-Falco es una herramienta de código abierto de seguridad en tiempo de ejecución (runtime security) nativa de la nube, diseñada para detectar comportamientos anómalos, amenazas y accesos no autorizados en hosts, contenedores y clústeres de Kubernetes en tiempo real
+### Herramientas
 
-En el contexto de Falco, una sonda (probe) es el componente de software encargado de captar las llamadas al sistema del kernel de Linux y enviarlas al espacio de usuario donde Falco las procesa. Es el "ojo" de Falco dentro del sistema operativo.
+| Herramienta | Versión | Uso |
+|---|---|---|
+| Falco | la última (porque fijar la versión dio errores) | Detección de comportamiento sospechoso en contenedores en ejecución |
+
+- [Falco](https://falco.org/docs/getting-started/falco-kubernetes-quickstart/) es una herramienta de seguridad en tiempo de ejecución (runtime security). Mientras que Trivy, KubeLinter y Kyverno revisan imágenes y manifiestos antes de que algo corra, Falco observa lo que los procesos hacen una vez en marcha. Compara cada evento con un conjunto de reglas y emite una alerta cuando alguna se cumple.
+
+    Para ver esos eventos, Falco usa una **sonda** (probe): el componente que capta las llamadas al sistema (syscalls) en el kernel de Linux y se las entrega a Falco en el espacio de usuario. En este entregable se usa la **sonda eBPF moderna** (`modern_ebpf`). Viene compilada dentro del binario de Falco, así que no hay que compilar ni cargar un módulo del kernel. A cambio, necesita un kernel que exponga BTF (`/sys/kernel/btf/vmlinux`), que se verifica en el paso 1.
+
+    Por eso Falco corre como un DaemonSet privilegiado: un pod por nodo, con acceso al kernel del nodo. Ese privilegio violaría las tres políticas de Kyverno, y por eso el namespace `falco` está excluido de ellas.
 
 ### Alerta de Falco
 
-time      : 2026-11-08T11:40:26.535436666Z
+Al abrir una shell interactiva dentro de un pod de la app, Falco disparó la regla **Terminal shell in container**. Esa regla detecta un intérprete de comandos con una terminal asociada dentro de un contenedor: en producción casi nunca es legítimo y suele ser el primer paso de un atacante.
+
+```bash
+time      : 2026-11-10T17:51:11.754347136Z
 rule      : Terminal shell in container
 priority  : Notice
-pod       : ci-validator-api-57b864cdf9-8dgps
+pod       : ci-validator-api-57b864cdf9-6vwqd
 namespace : default
 uid       : 100
 proceso   : sh
-padre     : 
+padre     : containerd-shim
 terminal  : 34816
+```
 
+### Comandos para Obtener los Reportes
 
-### Comandos
+Ejecutados en PowerShell (>v6.0), desde la raíz del repositorio:
 
 ```bash
 === 0. Punto de partida ===
@@ -396,16 +458,16 @@ minikube ssh -- uname -r
 minikube ssh -- ls -l /sys/kernel/btf/vmlinux
 kubectl get nodes -o wide
 
-# uname -r debería mostrar algo como 6.x-microsoft-standard-WSL2, o -linuxkit si Docker Desktop usa Hyper-V. Es el kernel de la VM de Docker Desktop, no uno propio de minikube.
-# /sys/kernel/btf/vmlinux tiene que existir.
-# La columna CONTAINER-RUNTIME debería decir docker://.... Falco consulta ese runtime para saber a qué pod y namespace pertenece cada evento.
+# uname -r muestra el kernel de la VM de Docker Desktop (por ejemplo x-microsoft-standard-WSL2), no uno propio de minikube.
+# /sys/kernel/btf/vmlinux tiene que existir: la sonda moderna lo necesita.
+# La columna CONTAINER-RUNTIME debe decir docker://...: Falco consulta ese runtime para saber a qué pod y namespace pertenece cada evento.
 
-=== 2: confirmar la exclusión del namespace. ===
+=== 2. Confirmar que las políticas de Kyverno excluyen el namespace falco ===
 
 kubectl get vpol -o custom-columns='POLITICA:.metadata.name,ACCION:.spec.validationActions,NS_EXCLUIDOS:.spec.matchConstraints.namespaceSelector.matchExpressions[0].values'
-# Las tres políticas deben mostrar [Deny] y [kube-system kyverno falco].
+# Las tres políticas deben mostrar [Deny] y [kube-system kyverno falco]. Si no, Kyverno rechaza el DaemonSet de Falco.
 
-=== 4. instalar Falco con la versión fijada. ===
+=== 3. Instalar Falco ===
 
 helm repo add falcosecurity https://falcosecurity.github.io/charts
 helm repo update
@@ -413,28 +475,28 @@ helm show chart falcosecurity/falco
 
 helm install falco falcosecurity/falco --namespace falco --create-namespace -f entregable3/k8s/falco/falco-values.yaml
 
-kubectl rollout status daemonset/falco -n falco --timeout=5m
+kubectl rollout status daemonset/falco -n falco
 kubectl get pods -n falco
 
-=== Paso 5: comprobar que Falco está capturando. ===
+=== 4. Comprobar que Falco está capturando ===
 
 kubectl logs -n falco daemonset/falco -c falco | Select-String "Falco version|falco_rules.yaml|Enabled event sources|modern BPF|ring buffer|iterators"
 
-# Deberías ver Falco version: 0.45.2, la carga de /etc/falco/falco_rules.yaml, Enabled event sources: syscall y Opening 'syscall' source with modern BPF probe.
+# Para ver Falco version, la carga de /etc/falco/falco_rules.yaml, Enabled event sources: syscall y Opening 'syscall' source with modern BPF probe.
 # Una línea con disabled BPF iterators (not running in the root PID namespace...) es informativa y normal: Falco corre en el namespace de PIDs de su propio pod.
-# Uso daemonset/falco y no -l app.kubernetes.io/name=falco a propósito: con selector, kubectl logs muestra solo 10 líneas por defecto.
+# Usa daemonset/falco y no -l app.kubernetes.io/name=falco a propósito: con selector, kubectl logs muestra solo 10 líneas por defecto.
 
-=== Paso 6: ejecutar la acción sospechosa. ===
+=== 5. Ejecutar la acción sospechosa ===
 
-# En la terminal A, deja los logs en vivo:
+# En la terminal A, dejar los logs en vivo:
 kubectl logs -n falco daemonset/falco -c falco -f --tail=0
 
-# En la terminal B, abre la shell:
+# En la terminal B, abrir la shell:
 (Get-Date).ToUniversalTime().ToString("o")   # Falco registra la hora en UTC
 $POD = kubectl get pods -l app=ci-validator-api -o jsonpath='{.items[0].metadata.name}'
 kubectl exec -it $POD -- sh
 
-# Dentro del contenedor:
+# Dentro del contenedor (de paso se comprueba el endurecimiento):
 id               # uid=100(appuser) gid=101(appgroup)
 cat /etc/shadow  # Permission denied
 touch /tmp/x     # Read-only file system
@@ -453,6 +515,7 @@ kubectl logs -n falco daemonset/falco -c falco --since=30m |
 
 (Get-Content $OUT).Count
 
+# Vista legible de la alerta (la tabla de arriba sale de acá).
 Get-Content $OUT | ForEach-Object { $_ | ConvertFrom-Json } | Select-Object time, rule, priority,
   @{n='pod'; e={ $_.output_fields.'k8s.pod.name' }},
   @{n='namespace'; e={ $_.output_fields.'k8s.ns.name' }},

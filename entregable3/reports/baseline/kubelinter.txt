@@ -6,11 +6,3 @@ KubeLinter 0.8.3
 
 /repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" is not set to runAsNonRoot (check: run-as-non-root, remediation: Set runAsUser to a non-zero number and runAsNonRoot to true in your pod or container securityContext. Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ for details.)
 
-/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has cpu limit 0 (check: unset-cpu-limit, remediation: Definir resources.limits.cpu (lo exige la política require-requests-limits).)
-
-/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has cpu request 0 (check: unset-cpu-requirements, remediation: Set CPU requests for your container based on its requirements. Refer to https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits for details.)
-
-/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has memory request 0 (check: unset-memory-request, remediation: Definir resources.requests.memory (lo exige la política require-requests-limits).)
-
-/repo/entregable2/k8s/app/deployment.yaml: (object: <no namespace>/ci-validator-api apps/v1, Kind=Deployment) container "ci-validator-api-container" has memory limit 0 (check: unset-memory-requirements, remediation: Set memory limits for your container based on its requirements. Refer to https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits for details.)
-
